@@ -2,6 +2,11 @@
 
 > Ethereum smart contract for [Authereum](http://authereum.org)
 
+[![License](http://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/authereum/converter/master/LICENSE)
+[![dependencies Status](https://david-dm.org/authereum/contracts/status.svg)](https://david-dm.org/authereum/contracts)
+
+⚠️ This code has not been audited. Not recommended to use in production.
+
 ## Config
 
 Environment variables:
@@ -19,7 +24,7 @@ You may also set the config by invoking the `setConfig(config)` static method.
 
 ## Deploy
 
-The first thing required for deployment of the proxy accounts is the deployment and setup of ENS on the appropriate network. To do this, run the deploy script in 'monorepo/packages/backend/src/deploy/deploy.ts'. Once this has been completed, the ENS Manager addresses can be used in the initialization of the AuthereumAccount.
+The first thing required for deployment of the proxy accounts is the deployment and setup of ENS on the appropriate network. To do this, run the deploy script in './deploy/mainnetEnsDeploy.ts'. Once this has been completed, the ENS Manager addresses can be used in the initialization of the AuthereumAccount.
 
 
 ```bash
@@ -59,6 +64,14 @@ npx zos create2 AuthereumAccount --salt 0x1112 --from 0x000000000000000000000000
 * ensReverseRegistrar = 0xeb5acb4d359aA939e2DC4BB68b4B9532DED4860D
 * authereumEnsManager = 0x203D879E8ADAcDe8225F75f8D8DC2Cd33528A6fa
 * proxyContract = 0x3468A9D9dE4ED9Ed6f47b59e7185De14fD34b0d6
+
+#### Main Net
+
+* ensRegistry = 0x314159265dD8dbb310642f98f50C066173C1259b
+* authereumEnsResolver = Coming soon
+* ensReverseRegistrar = 0x9062C0A6Dbd6108336BcBe4593a3D1cE05512069
+* authereumEnsManager = Coming soon
+* proxyContract = Coming soon
 
 ## Test
 ```bash
