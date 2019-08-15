@@ -1,0 +1,17 @@
+{
+  "zosversion": "2.2",
+  "name": "authereumContracts",
+  "version": "1.0.0",
+  "manifestVersion": "2.2",
+  "contracts": {
+    "AuthereumAccount": "AuthereumAccount",
+    "Account": "Account"
+  },
+  "dependencies": {},
+  "compiler": {
+    "manager": "truffle",
+    "compilerSettings": {
+      "optimizer": {}
+    }
+  }
+}

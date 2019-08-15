@@ -1,0 +1,293 @@
+{
+  "manifestVersion": "2.2",
+  "contracts": {
+    "AuthereumAccount": {
+      "address": "0xD220e1681368cdd4Bff39F5E9Be02A3B0eE0E19D",
+      "constructorCode": "608060405234801561001057600080fd5b50613acb806100206000396000f3fe",
+      "bodyBytecodeHash": "deb299f1cdfca326936bb5db1189f1e1dee803f8964d604d2d6f18fde68a9f0d",
+      "localBytecodeHash": "6797ea9a80d3aec916087039b9746cec0f4056c9382717020621fe823b43fa3d",
+      "deployedBytecodeHash": "6797ea9a80d3aec916087039b9746cec0f4056c9382717020621fe823b43fa3d",
+      "types": {
+        "t_bool": {
+          "id": "t_bool",
+          "kind": "elementary",
+          "label": "bool"
+        },
+        "t_uint256": {
+          "id": "t_uint256",
+          "kind": "elementary",
+          "label": "uint256"
+        },
+        "t_array:50<t_uint256>": {
+          "id": "t_array:50<t_uint256>",
+          "valueType": "t_uint256",
+          "length": "50",
+          "kind": "array",
+          "label": "uint256[50]"
+        },
+        "t_address": {
+          "id": "t_address",
+          "kind": "elementary",
+          "label": "address"
+        },
+        "t_array:dyn<t_address>": {
+          "id": "t_array:dyn<t_address>",
+          "valueType": "t_address",
+          "length": "dyn",
+          "kind": "array",
+          "label": "address[]"
+        },
+        "t_mapping<t_uint256>": {
+          "id": "t_mapping<t_uint256>",
+          "valueType": "t_uint256",
+          "label": "mapping(key => uint256)",
+          "kind": "mapping"
+        },
+        "t_mapping<t_bool>": {
+          "id": "t_mapping<t_bool>",
+          "valueType": "t_bool",
+          "label": "mapping(key => bool)",
+          "kind": "mapping"
+        }
+      },
+      "storage": [
+        {
+          "contract": "Initializable",
+          "path": "zos-lib/contracts/Initializable.sol",
+          "label": "initialized",
+          "astId": 4841,
+          "type": "t_bool",
+          "src": "757:24:19"
+        },
+        {
+          "contract": "Initializable",
+          "path": "zos-lib/contracts/Initializable.sol",
+          "label": "initializing",
+          "astId": 4843,
+          "type": "t_bool",
+          "src": "876:25:19"
+        },
+        {
+          "contract": "Initializable",
+          "path": "zos-lib/contracts/Initializable.sol",
+          "label": "______gap",
+          "astId": 4899,
+          "type": "t_array:50<t_uint256>",
+          "src": "1951:29:19"
+        },
+        {
+          "contract": "Account",
+          "path": "contracts/account/Account.sol",
+          "label": "authKeysArray",
+          "astId": 79,
+          "type": "t_array:dyn<t_address>",
+          "src": "430:30:1"
+        },
+        {
+          "contract": "Account",
+          "path": "contracts/account/Account.sol",
+          "label": "authKeysArrayIndex",
+          "astId": 83,
+          "type": "t_mapping<t_uint256>",
+          "src": "466:53:1"
+        },
+        {
+          "contract": "Account",
+          "path": "contracts/account/Account.sol",
+          "label": "authKeys",
+          "astId": 87,
+          "type": "t_mapping<t_bool>",
+          "src": "525:40:1"
+        },
+        {
+          "contract": "Account",
+          "path": "contracts/account/Account.sol",
+          "label": "nonce",
+          "astId": 89,
+          "type": "t_uint256",
+          "src": "571:20:1"
+        },
+        {
+          "contract": "Account",
+          "path": "contracts/account/Account.sol",
+          "label": "CHAIN_ID",
+          "astId": 91,
+          "type": "t_uint256",
+          "src": "597:23:1"
+        },
+        {
+          "contract": "TransactionLimit",
+          "path": "contracts/firewall/TransactionLimit.sol",
+          "label": "dailyLimit",
+          "astId": 2066,
+          "type": "t_uint256",
+          "src": "103:25:10"
+        },
+        {
+          "contract": "TransactionLimit",
+          "path": "contracts/firewall/TransactionLimit.sol",
+          "label": "dailyLimitTracker",
+          "astId": 2070,
+          "type": "t_mapping<t_uint256>",
+          "src": "134:52:10"
+        }
+      ],
+      "warnings": {
+        "hasConstructor": false,
+        "hasSelfDestruct": false,
+        "hasDelegateCall": false,
+        "hasInitialValuesInDeclarations": false,
+        "uninitializedBaseContracts": []
+      }
+    },
+    "Account": {
+      "address": "0x9fB253BBD2908609BEA57A7A45345382Fa696D9D",
+      "constructorCode": "608060405234801561001057600080fd5b50612562806100206000396000f3fe",
+      "bodyBytecodeHash": "c44fcb138a42fa11e862f374d4fe71c6aceef982b034e75d8022b8b396f95ef2",
+      "localBytecodeHash": "28a1ac6a5f857e151ea1c6af42f6a71ec428f5f0463a7e4c4aadc327517ae8cc",
+      "deployedBytecodeHash": "28a1ac6a5f857e151ea1c6af42f6a71ec428f5f0463a7e4c4aadc327517ae8cc",
+      "types": {
+        "t_bool": {
+          "id": "t_bool",
+          "kind": "elementary",
+          "label": "bool"
+        },
+        "t_uint256": {
+          "id": "t_uint256",
+          "kind": "elementary",
+          "label": "uint256"
+        },
+        "t_array:50<t_uint256>": {
+          "id": "t_array:50<t_uint256>",
+          "valueType": "t_uint256",
+          "length": "50",
+          "kind": "array",
+          "label": "uint256[50]"
+        },
+        "t_address": {
+          "id": "t_address",
+          "kind": "elementary",
+          "label": "address"
+        },
+        "t_array:dyn<t_address>": {
+          "id": "t_array:dyn<t_address>",
+          "valueType": "t_address",
+          "length": "dyn",
+          "kind": "array",
+          "label": "address[]"
+        },
+        "t_mapping<t_uint256>": {
+          "id": "t_mapping<t_uint256>",
+          "valueType": "t_uint256",
+          "label": "mapping(key => uint256)",
+          "kind": "mapping"
+        },
+        "t_mapping<t_bool>": {
+          "id": "t_mapping<t_bool>",
+          "valueType": "t_bool",
+          "label": "mapping(key => bool)",
+          "kind": "mapping"
+        }
+      },
+      "storage": [
+        {
+          "contract": "Initializable",
+          "path": "zos-lib/contracts/Initializable.sol",
+          "label": "initialized",
+          "astId": 4841,
+          "type": "t_bool",
+          "src": "757:24:19"
+        },
+        {
+          "contract": "Initializable",
+          "path": "zos-lib/contracts/Initializable.sol",
+          "label": "initializing",
+          "astId": 4843,
+          "type": "t_bool",
+          "src": "876:25:19"
+        },
+        {
+          "contract": "Initializable",
+          "path": "zos-lib/contracts/Initializable.sol",
+          "label": "______gap",
+          "astId": 4899,
+          "type": "t_array:50<t_uint256>",
+          "src": "1951:29:19"
+        },
+        {
+          "contract": "Account",
+          "path": "contracts/account/Account.sol",
+          "label": "authKeysArray",
+          "astId": 79,
+          "type": "t_array:dyn<t_address>",
+          "src": "430:30:1"
+        },
+        {
+          "contract": "Account",
+          "path": "contracts/account/Account.sol",
+          "label": "authKeysArrayIndex",
+          "astId": 83,
+          "type": "t_mapping<t_uint256>",
+          "src": "466:53:1"
+        },
+        {
+          "contract": "Account",
+          "path": "contracts/account/Account.sol",
+          "label": "authKeys",
+          "astId": 87,
+          "type": "t_mapping<t_bool>",
+          "src": "525:40:1"
+        },
+        {
+          "contract": "Account",
+          "path": "contracts/account/Account.sol",
+          "label": "nonce",
+          "astId": 89,
+          "type": "t_uint256",
+          "src": "571:20:1"
+        },
+        {
+          "contract": "Account",
+          "path": "contracts/account/Account.sol",
+          "label": "CHAIN_ID",
+          "astId": 91,
+          "type": "t_uint256",
+          "src": "597:23:1"
+        }
+      ],
+      "warnings": {
+        "hasConstructor": false,
+        "hasSelfDestruct": false,
+        "hasDelegateCall": false,
+        "hasInitialValuesInDeclarations": false,
+        "uninitializedBaseContracts": []
+      }
+    }
+  },
+  "solidityLibs": {},
+  "proxies": {
+    "authereumContracts/AuthereumAccount": [
+      {
+        "address": "0xd6a22DD9ca760C76993b7BA175A640Caa6515867",
+        "version": "1.0.0",
+        "implementation": "0xD220e1681368cdd4Bff39F5E9Be02A3B0eE0E19D",
+        "kind": "Upgradeable"
+      },
+      {
+        "address": "0x764dc6a27b43fBA4EEa8993749F89fC7B01d677c",
+        "version": "1.0.0",
+        "implementation": "0xD220e1681368cdd4Bff39F5E9Be02A3B0eE0E19D",
+        "admin": "0xAf73aeCC08e0D1e892615110BD7a5a1633CA4dB5",
+        "kind": "Upgradeable"
+      }
+    ]
+  },
+  "zosversion": "2.2",
+  "version": "1.0.0",
+  "proxyAdmin": {
+    "address": "0xAf73aeCC08e0D1e892615110BD7a5a1633CA4dB5"
+  },
+  "proxyFactory": {
+    "address": "0x3468A9D9dE4ED9Ed6f47b59e7185De14fD34b0d6"
+  }
+}

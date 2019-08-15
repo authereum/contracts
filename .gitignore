@@ -1,0 +1,17 @@
+build
+build/contracts
+.idea/
+node_modules
+contracts/token/projects/
+test/token/projects/
+truffle-config.js
+
+zos.dev*
+
+.env
+
+*~
+*.swp
+*.swo
+.zos.session
+*.log

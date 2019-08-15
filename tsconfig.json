@@ -1,0 +1,33 @@
+{
+  "compilerOptions": {
+    "lib": [ "es2015" , "dom" ],
+    "module": "commonjs",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "target": "es6",
+    "noImplicitAny": true,
+    "moduleResolution": "node",
+    "sourceMap": true,
+    "outDir": "dist",
+    "baseUrl": ".",
+    "paths": {
+      "*": [
+        "node_modules/*"
+      ]
+    },
+    "noImplicitAny": false,
+    "typeRoots": [
+      "./node_modules/@types",
+      "./@types"
+    ]
+  },
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "**/*.spec.ts",
+    "zos*.json",
+    "build"
+  ]
+}
