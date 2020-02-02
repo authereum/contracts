@@ -67,7 +67,7 @@ npx zos create2 AuthereumAccount --salt 0x1112 --from 0x000000000000000000000000
 
 #### Main Net
 
-* ensRegistry = 0x314159265dD8dbb310642f98f50C066173C1259b
+* ensRegistry = 0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e
 * authereumEnsResolver = Coming soon
 * ensReverseRegistrar = 0x9062C0A6Dbd6108336BcBe4593a3D1cE05512069
 * authereumEnsManager = Coming soon
