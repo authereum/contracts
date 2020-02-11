@@ -5,9 +5,11 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "target": "es6",
+    "declaration": true,
     "noImplicitAny": true,
     "moduleResolution": "node",
-    "sourceMap": true,
+    "resolveJsonModule": true,
+    "sourceMap": false,
     "outDir": "dist",
     "baseUrl": ".",
     "paths": {
@@ -15,19 +17,20 @@
         "node_modules/*"
       ]
     },
-    "noImplicitAny": false,
     "typeRoots": [
       "./node_modules/@types",
       "./@types"
     ]
   },
   "include": [
-    "src/**/*"
+    "src/**/*",
+    "src/config/*.json"
   ],
   "exclude": [
     "node_modules",
     "**/*.spec.ts",
-    "zos*.json",
+    "**/*.test.ts",
+    "dist",
     "build"
   ]
 }

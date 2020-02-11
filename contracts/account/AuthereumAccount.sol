@@ -1,41 +1,27 @@
-pragma solidity ^0.5.8;
+pragma solidity 0.5.16;
+pragma experimental ABIEncoderV2;
 
-import "./Account.sol";
+import "./BaseAccount.sol";
+import "./ERC1271Account.sol";
 import "./LoginKeyMetaTxAccount.sol";
 import "./AuthKeyMetaTxAccount.sol";
+import "./AccountUpgradeability.sol";
+import "../interfaces/IAuthereumAccount.sol";
 
 /**
- * AuthereumENSManager interface.
+ * @title AuthereumAccount
+ * @author Authereum, Inc.
+ * @dev Top-level contract used when creating an Authereum account.
+ * @dev This contract is meant to only hold the version. All other logic is inherited.
  */
-contract AuthereumENSManager {
-    function register(string calldata _label, address _owner) external {}
-}
 
-contract AuthereumAccount is Account, AuthKeyMetaTxAccount, LoginKeyMetaTxAccount, AuthereumENSManager {
-
-    /// @dev Initialize the Authereum Account
-    /// @param _authKey authKey that will own this account
-    /// @param _authereumENSManager Address of the Authereum ENS Manager
-    /// @param _label Label of the ENS name
-    function initialize(
-        address _authKey,
-        address _authereumENSManager,
-        string memory _label
-    )
-        public
-        initializer
-    {
-        // Set the CHAIN_ID
-        Account.initialize();
-        TransactionLimit.initialize();
-
-        // Add self as an authKey
-        authKeys[_authKey] = true;
-        authKeysArray.push(_authKey);
-        authKeysArrayIndex[_authKey] = authKeysArray.length - 1;
-        emit AddedAuthKey(_authKey);
-
-        // Register user in ENS
-        AuthereumENSManager(_authereumENSManager).register(_label, address(this));
-    }
+contract AuthereumAccount is
+    IAuthereumAccount,
+    BaseAccount,
+    ERC1271Account,
+    LoginKeyMetaTxAccount,
+    AuthKeyMetaTxAccount,
+    AccountUpgradeability
+{
+    string constant public authereumVersion = "2020010900";
 }

@@ -1,18 +1,15 @@
-pragma solidity ^0.5.8;
+pragma solidity 0.5.16;
 
 import "./EnsRegistry.sol";
-
-/**
- * ENS Resolver interface.
- */
-contract EnsResolver {
-    function setName(bytes32 _node, string calldata _name) external {}
-}
+import "./EnsResolver.sol";
 
 /**
  * ENS Reverse registrar test contract.
  */
 contract EnsReverseRegistrar {
+
+    string constant public ensReverseRegistrarVersion = "2019102500";
+
    // namehash('addr.reverse')
     bytes32 constant ADDR_REVERSE_NODE = 0x91d1777781884d03a6757a803996e38de2a42967fb37eeaca72729271025a9e2;
 
@@ -98,7 +95,7 @@ contract EnsReverseRegistrar {
      * @return The SHA3 hash of the lower-case hexadecimal encoding of the
      *         input address.
      */
-    function sha3HexAddress(address addr) private returns (bytes32 ret) {
+    function sha3HexAddress(address addr) private pure returns (bytes32 ret) {
         assembly {
             let lookup := 0x3031323334353637383961626364656600000000000000000000000000000000
             let i := 40

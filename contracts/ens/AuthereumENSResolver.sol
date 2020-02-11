@@ -1,57 +1,34 @@
-/*
-       Copyright (C) 2018 Argent Ltd. <https://argent.xyz>
+pragma solidity 0.5.16;
 
-        This program is free software: you can redistribute it and/or modify
-        it under the terms of the GNU General Public License as published by
-        the Free Software Foundation, either version 3 of the License, or
-        (at your option) any later version.
-
-        This program is distributed in the hope that it will be useful,
-        but WITHOUT ANY WARRANTY; without even the implied warranty of
-        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-        GNU General Public License for more details.
-
-        You should have received a copy of the GNU General Public License
-        along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-*/
-
-pragma solidity ^0.5.8;
-
-import "../base/Owned.sol";
 import "../base/Managed.sol";
-import "./ENS.sol";
+import "./state/AuthereumEnsResolverState.sol";
 
 /**
  * @title AuthereumEnsResolver
- * @author Julien Niset - <julien@argent.im>
+  * @author Authereum, Inc.
  * @dev Authereum implementation of a Resolver.
  */
 
-contract AuthereumEnsResolver is Owned, Managed {
+contract AuthereumEnsResolver is Managed, AuthereumEnsResolverState {
 
-    bytes4 constant INTERFACE_META_ID = 0x01ffc9a7;
-    bytes4 constant ADDR_INTERFACE_ID = 0x3b3b57de;
-    bytes4 constant NAME_INTERFACE_ID = 0x691f3431;
+    string constant public authereumEnsResolverVersion = "2019111500";
+
+    bytes4 constant private INTERFACE_META_ID = 0x01ffc9a7;
+    bytes4 constant private ADDR_INTERFACE_ID = 0x3b3b57de;
+    bytes4 constant private NAME_INTERFACE_ID = 0x691f3431;
+    bytes4 constant private TEXT_INTERFACE_ID = 0x59d1d43c;
+    bytes4 constant private CONTENT_HASH_INTERFACE_ID = 0xbc1c58d1;
 
     event AddrChanged(bytes32 indexed node, address a);
     event NameChanged(bytes32 indexed node, string name);
-
-    struct Record {
-        address addr;
-        string name;
-    }
-
-    EnsRegistry ens;
-    mapping (bytes32 => Record) records;
-    address public authereumEnsManager;
-    address public timelockContract;
+    event TextChanged(bytes32 indexed node, string indexed indexedKey, string key, string value);
+    event ContenthashChanged(bytes32 indexed node, bytes hash);
 
     /// @dev Constructor
-    /// @param ensAddr The ENS registrar contract.
+    /// @param _ensAddr The ENS registrar contract
     /// @param _timelockContract Authereum timelock contract address
-    constructor(EnsRegistry ensAddr, address _timelockContract) public {
-        ens = ensAddr;
+    constructor(EnsRegistry _ensAddr, address _timelockContract) public {
+        ens = _ensAddr;
         timelockContract = _timelockContract;
     }
 
@@ -59,49 +36,85 @@ contract AuthereumEnsResolver is Owned, Managed {
      * Setters
      */
 
-    /// @dev Sets the address associated with an ENS node.
-    /// @notice May only be called by the owner of that node in the ENS registry.
-    /// @param node The node to update.
-    /// @param addr The address to set.
-    function setAddr(bytes32 node, address addr) public onlyManager {
-        records[node].addr = addr;
-        emit AddrChanged(node, addr);
+    /// @dev Sets the address associated with an ENS node
+    /// @notice May only be called by the owner of that node in the ENS registry
+    /// @param _node The node to update
+    /// @param _addr The address to set
+    function setAddr(bytes32 _node, address _addr) public onlyManager {
+        addrs[_node]= _addr;
+        emit AddrChanged(_node, _addr);
     }
 
-    /// @dev Sets the name associated with an ENS node, for reverse records.
-    /// @notice May only be called by the owner of that node in the ENS registry.
-    /// @param node The node to update.
-    /// @param name The name to set.
-    function setName(bytes32 node, string memory name) public onlyManager {
-        records[node].name = name;
-        emit NameChanged(node, name);
+    /// @dev Sets the name associated with an ENS node, for reverse records
+    /// @notice May only be called by the owner of that node in the ENS registry
+    /// @param _node The node to update
+    /// @param _name The name to set
+    function setName(bytes32 _node, string memory _name) public onlyManager {
+        names[_node] = _name;
+        emit NameChanged(_node, _name);
+    }
+
+    /// @dev Sets the text data associated with an ENS node and key
+    /// @notice May only be called by the owner of that node in the ENS registry
+    /// @param node The node to update
+    /// @param key The key to set
+    /// @param value The text data value to set
+    function setText(bytes32 node, string memory key, string memory value) public onlyManager {
+        texts[node][key] = value;
+        emit TextChanged(node, key, key, value);
+    }
+
+    /// @dev Sets the contenthash associated with an ENS node
+    /// @notice May only be called by the owner of that node in the ENS registry
+    /// @param node The node to update
+    /// @param hash The contenthash to set
+    function setContenthash(bytes32 node, bytes memory hash) public onlyManager {
+        hashes[node] = hash;
+        emit ContenthashChanged(node, hash);
     }
 
     /**
      * Getters
      */
 
-    /// @dev Returns the address associated with an ENS node.
-    /// @param node The ENS node to query.
-    /// @return The associated address.
-    function addr(bytes32 node) public view returns (address) {
-        return records[node].addr;
+    /// @dev Returns the address associated with an ENS node
+    /// @param _node The ENS node to query
+    /// @return The associated address
+    function addr(bytes32 _node) public view returns (address) {
+        return addrs[_node];
     }
 
-    /// @dev Returns the name associated with an ENS node, for reverse records.
-    /// @notice Defined in EIP181.
-    /// @param node The ENS node to query.
-    /// @return The associated name.
-    function name(bytes32 node) public view returns (string memory) {
-        return records[node].name;
+    /// @dev Returns the name associated with an ENS node, for reverse records
+    /// @notice Defined in EIP181
+    /// @param _node The ENS node to query
+    /// @return The associated name
+    function name(bytes32 _node) public view returns (string memory) {
+        return names[_node];
     }
 
-    /// @dev Returns true if the resolver implements the interface specified by the provided hash.
-    /// @param interfaceID The ID of the interface to check for.
-    /// @return True if the contract implements the requested interface.
-    function supportsInterface(bytes4 interfaceID) public pure returns (bool) {
-        return interfaceID == INTERFACE_META_ID ||
-        interfaceID == ADDR_INTERFACE_ID ||
-        interfaceID == NAME_INTERFACE_ID;
+    /// @dev Returns the text data associated with an ENS node and key
+    /// @param node The ENS node to query
+    /// @param key The text data key to query
+    ///@return The associated text data
+    function text(bytes32 node, string memory key) public view returns (string memory) {
+        return texts[node][key];
+    }
+
+    /// @dev Returns the contenthash associated with an ENS node
+    /// @param node The ENS node to query
+    /// @return The associated contenthash
+    function contenthash(bytes32 node) public view returns (bytes memory) {
+        return hashes[node];
+    }
+
+    /// @dev Returns true if the resolver implements the interface specified by the provided hash
+    /// @param _interfaceID The ID of the interface to check for
+    /// @return True if the contract implements the requested interface
+    function supportsInterface(bytes4 _interfaceID) public pure returns (bool) {
+        return _interfaceID == INTERFACE_META_ID ||
+        _interfaceID == ADDR_INTERFACE_ID ||
+        _interfaceID == NAME_INTERFACE_ID ||
+        _interfaceID == TEXT_INTERFACE_ID ||
+        _interfaceID == CONTENT_HASH_INTERFACE_ID;
     }
 }

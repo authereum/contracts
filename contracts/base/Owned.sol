@@ -1,26 +1,8 @@
-/*
-       Copyright (C) 2018 Argent Ltd. <https://argent.xyz>
-
-        This program is free software: you can redistribute it and/or modify
-        it under the terms of the GNU General Public License as published by
-        the Free Software Foundation, either version 3 of the License, or
-        (at your option) any later version.
-
-        This program is distributed in the hope that it will be useful,
-        but WITHOUT ANY WARRANTY; without even the implied warranty of
-        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-        GNU General Public License for more details.
-
-        You should have received a copy of the GNU General Public License
-        along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-*/
-
-pragma solidity ^0.5.4;
+pragma solidity ^0.5.16;
 
 /**
  * @title Owned
- * @author Julien Niset - <julien@argent.im>
+ * @author Authereum, Inc.
  * @dev Basic contract to define an owner.
  */
 
@@ -31,9 +13,9 @@ contract Owned {
 
     event OwnerChanged(address indexed _newOwner);
 
-    /// @dev Throws if the sender is not the owner.
+    /// @dev Throws if the sender is not the owner
     modifier onlyOwner {
-        require(msg.sender == owner, "Must be owner");
+        require(msg.sender == owner, "O: Must be owner");
         _;
     }
 
@@ -41,16 +23,17 @@ contract Owned {
         owner = msg.sender;
     }
 
-    /// @dev Return the ownership status of an address.
-    /// @param _potentialOwner Address being checked.
+    /// @dev Return the ownership status of an address
+    /// @param _potentialOwner Address being checked
+    /// @return True if the _potentialOwner is the owner
     function isOwner(address _potentialOwner) external view returns (bool) {
         return owner == _potentialOwner;
     }
 
-    /// @dev Lets the owner transfer ownership of the contract to a new owner.
-    /// @param _newOwner The new owner.
+    /// @dev Lets the owner transfer ownership of the contract to a new owner
+    /// @param _newOwner The new owner
     function changeOwner(address _newOwner) external onlyOwner {
-        require(_newOwner != address(0), "Address must not be null");
+        require(_newOwner != address(0), "O: Address must not be null");
         owner = _newOwner;
         emit OwnerChanged(_newOwner);
     }

@@ -1,47 +1,86 @@
-pragma solidity ^0.5.8;
+pragma solidity 0.5.16;
+pragma experimental ABIEncoderV2;
 
-import "./Account.sol";
+import "./BaseMetaTxAccount.sol";
 
-contract AuthKeyMetaTxAccount is Account {
+/**
+ * @title AuthKeyMetaTxAccount
+ * @author Authereum, Inc.
+ * @dev Contract used by auth keys to send transactions.
+ */
 
-    /// @dev Execute an authKey meta transaction
-    /// @param _destination Destination of the transaction
-    /// @param _data Data of the transaction
-    /// @param _value Value of the transaction
-    /// @param _gasLimit Gas limit of the transaction
-    /// @param _transactionDataSignature Signed tx data
-    function executeAuthKeyMetaTx(
-        address _destination,
-        bytes memory _data,
-        uint256 _value,
-        uint256 _gasLimit,
-        bytes memory _transactionDataSignature
+contract AuthKeyMetaTxAccount is BaseMetaTxAccount {
+
+    /// @dev Execute multiple authKey meta transactions
+    /// @param _transactions Arrays of transaction data ([destination, value, gasLimit, data][...]...)
+    /// @param _gasPrice Gas price set by the user
+    /// @param _gasOverhead Gas overhead of the transaction calculated offchain
+    /// @param _feeTokenAddress Address of the token used to pay a fee
+    /// @param _feeTokenRate Rate of the token (in tokenGasPrice/ethGasPrice) used to pay a fee
+    /// @param _transactionMessageHashSignature Signed transaction data
+    function executeMultipleAuthKeyMetaTransactions(
+        bytes[] memory _transactions,
+        uint256 _gasPrice,
+        uint256 _gasOverhead,
+        address _feeTokenAddress,
+        uint256 _feeTokenRate,
+        bytes memory _transactionMessageHashSignature
     )
         public
-        returns (bytes memory)
+        returns (bytes[] memory)
     {
-        uint256 startGas = gasleft();
+        uint256 _startGas = gasleft();
 
-        bytes32 _txDataMessageHash = keccak256(abi.encodePacked(
-            address(this),
-            msg.sig,
-            CHAIN_ID,
-            _destination,
-            _data,
-            _value,
-            nonce,
-            tx.gasprice,
-            _gasLimit
-        )).toEthSignedMessageHash();
-
-        address transactionDataSigner = _validateAuthKeyMetaTxSigs(
-            _txDataMessageHash, _transactionDataSignature
+        (bytes32 _transactionMessageHash, bytes[] memory _returnValues) = _atomicExecuteMultipleMetaTransactions(
+            _transactions,
+            _gasPrice,
+            _gasOverhead,
+            _feeTokenAddress,
+            _feeTokenRate
         );
 
-        bytes memory response = _executeTransactionWithRefund(
-            _destination, _value, _data, tx.gasprice, _gasLimit, startGas
+        // Validate the signer
+        _validateAuthKeyMetaTransactionSigs(
+            _transactionMessageHash, _transactionMessageHashSignature
         );
 
-        return response;
+        if (_shouldRefund(_transactions)) {
+          _issueRefund(_startGas, _gasPrice, _gasOverhead, _feeTokenAddress, _feeTokenRate);
+        }
+
+        return _returnValues;
+    }
+
+    /**
+     *  Internal functions
+     */
+
+    /// @dev Validate signatures from an auth key meta transaction
+    /// @param _transactionMessageHash Ethereum signed message of the transaction
+    /// @param _transactionMessageHashSignature Signed transaction data
+    /// @return Address of the auth key that signed the data
+    function _validateAuthKeyMetaTransactionSigs(
+        bytes32 _transactionMessageHash,
+        bytes memory _transactionMessageHashSignature
+    )
+        internal
+        view
+    {
+        address _authKey = _transactionMessageHash.recover(_transactionMessageHashSignature);
+        require(_isValidAuthKey(_authKey), "AKMTA: Auth key is invalid");
+    }
+
+    /// @dev Check whether a refund should be issued
+    /// @notice A refund should not be issued if the account is performing an Authereum-related update
+    /// @param _transactions Arrays of transaction data ([destination, value, gasLimit, data][...]...)
+    /// @return True if a refund should be issued
+    function _shouldRefund(bytes[] memory _transactions) internal view returns (bool) {
+        address _destination;
+        for(uint i = 0; i < _transactions.length; i++) {
+            (_destination,,,) = _decodeTransactionData(_transactions[i]);
+            if (_destination != address(this)) return true;
+        }
+
+        return false;
     }
 }

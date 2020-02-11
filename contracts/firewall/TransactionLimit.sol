@@ -1,34 +1,48 @@
-pragma solidity ^0.5.8;
+pragma solidity 0.5.16;
+pragma experimental ABIEncoderV2;
 
-import "../account/Account.sol";
+import "../account/BaseAccount.sol";
 
-contract TransactionLimit is Account {
+/**
+ * @title TransactionLimit
+ * @author Authereum, Inc.
+ * @dev Used to limit login key's transaction limits. This contract handles all
+ * @dev functionality related to daily limits for login keys.
+ */
 
+contract TransactionLimit is BaseAccount {
+
+    uint256 constant defaultDailyLimit = 10 ether;
+
+
+    // NOTE: This state and events will be included in the state and event
+    // NOTE: account files if they are ever included in an upgrade
     uint256 public dailyLimit;
     mapping(uint256 => uint256) public dailyLimitTracker;
 
+    event DailySpendIncreased(uint256 indexed day, uint256 indexed spendIncrease);
     event DailyLimitChanged(address indexed authKey, uint256 indexed newDailyLimit);
 
-    function initialize() public initializer {
-        dailyLimit = 10 ether;
-    }
 
     /**
      * Getters
      */
 
     /// @dev Gets the current day for the contract
+    /// @return Current day
     function getCurrentDay() public view returns (uint256) {
         return block.timestamp / 86400;
     }
 
     /// @dev Check if a user is within their daily limit
+    /// @return True if transaction will be within the daily limit
     function getIsWithinEthDailyTransactionLimit() public view returns (bool) {
         return getWillBeWithinEthDailyTransactionLimit(0);
     }
 
     /// @dev Check if a user will be within their daily limit after a transaction
     /// @param _value Value being sent with the current transaction
+    /// @return True if transaction will be within the daily limit
     function getWillBeWithinEthDailyTransactionLimit(uint256 _value) public view returns (bool) {
         uint256 currentDay = getCurrentDay();
         uint256 dailySpend = dailyLimitTracker[currentDay] + _value;
@@ -43,8 +57,8 @@ contract TransactionLimit is Account {
      */
 
     /// @dev Change the daily limit for a user
-    /// @dev _newDailyLimit New daily limit to set
-    function changeDailyLimit(uint256 _newDailyLimit) public onlyValidAuthKeyOrSelf {
+    /// @param _newDailyLimit New daily limit to set
+    function changeDailyLimit(uint256 _newDailyLimit) public onlyAuthKeySenderOrSelf {
         dailyLimit = _newDailyLimit;
         emit DailyLimitChanged(msg.sender, dailyLimit);
     }
@@ -53,14 +67,13 @@ contract TransactionLimit is Account {
      * Internal functions
      */
 
-    /// @dev Check the daily limit for a user and update the balance
+    /// @dev Update the tracked balance for daily limit for a user
     /// @param _value Value being sent with the current transaction
-    function checkAndUpdateEthDailyTransactionLimit(uint256 _value) internal returns (bool) {
-        bool _isWithinDailyLimit = getWillBeWithinEthDailyTransactionLimit(_value);
-        if (_isWithinDailyLimit) {
-            dailyLimitTracker[getCurrentDay()] += _value;
-            return true;
-        }
-        return false;
+    function updateEthDailyTransactionLimit(uint256 _value) internal {
+        // Do not update anything if there is no value associated with the transaction
+        if (_value == 0) return;
+
+        dailyLimitTracker[getCurrentDay()] += _value;
+        emit DailySpendIncreased(getCurrentDay(), _value);
     }
 }

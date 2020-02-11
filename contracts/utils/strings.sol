@@ -34,7 +34,7 @@
  *      corresponding to the left and right parts of the string.
  */
 
-pragma solidity ^0.5.8;
+pragma solidity 0.5.16;
 
 /* solium-disable */
 library strings {

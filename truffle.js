@@ -6,16 +6,18 @@ const PrivateKeyProvider = require('truffle-privatekey-provider')
 
 const privateKey = process.env.RELAYER_PRIVATE_KEY || process.env.SENDER_PRIVATE_KEY || process.env.PRIVATE_KEY
 const infuraId = process.env.INFURA_ID
+const rpcUri = process.env.TRUFFLE_RPC_URI || process.env.RPC_URI || process.env.ETH_HTTP_PROVIDER_URI
 
 const createPrivKeyProvider = (networkName) => {
-  const providerUri = `https://${networkName}.infura.io/v3/${infuraId}`
+  const providerUri = `https://${networkName}.rpc.authereum.org`
   return () => new PrivateKeyProvider(privateKey, providerUri)
 }
 
 module.exports = {
   networks: {
     development: {
-      provider: new Web3WsProvider('ws://localhost:8545'),
+      host: 'localhost',
+      port: '8545',
       network_id: '*', // eslint-disable-line camelcase
       gas: 5712383,
       gasPrice: 20000000000
@@ -30,8 +32,8 @@ module.exports = {
     mainnet: {
       provider: createPrivKeyProvider('mainnet'),
       network_id: '1', // eslint-disable-line camelcase
-      gas: 5712383,
-      gasPrice: 20000000000
+      gas: 2000000,
+      gasPrice: 50000000000
     },
     ropsten: {
       provider: createPrivKeyProvider('ropsten'),
@@ -65,7 +67,7 @@ module.exports = {
 
   compilers: {
     solc: {
-      version: '0.5.8',
+      version: '0.5.16',
       docker: false,
       optimizer: {
         enabled: false,

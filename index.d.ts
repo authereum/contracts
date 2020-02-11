@@ -1,1 +1,0 @@
-declare module '@authereum/contracts'

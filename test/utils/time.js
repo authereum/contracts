@@ -1,39 +1,48 @@
-const advanceTime = (time) => {
+// This module is used strictly for tests
+function send(method, params = []) {
   return new Promise((resolve, reject) => {
+    // eslint-disable-next-line no-undef
     web3.currentProvider.send({
       jsonrpc: '2.0',
-      method: 'evm_increaseTime',
-      params: [time],
-      id: new Date().getTime()
-    }, (err, result) => {
-      if (err) { return reject(err) }
-      return resolve(result)
+      id: Date.now(),
+      method,
+      params
+    }, (err, res) => {
+      return err ? reject(err) : resolve(res)
     })
   })
 }
 
-const advanceBlock = () => {
-  return new Promise((resolve, reject) => {
-    web3.currentProvider.send({
-      jsonrpc: '2.0',
-      method: 'evm_mine',
-      id: new Date().getTime()
-    }, (err, result) => {
-      if (err) { return reject(err) }
-      const newBlockHash = web3.eth.getBlock('latest').hash
-
-      return resolve(newBlockHash)
-    })
-  })
+const takeSnapshot = async () => {
+  return await send('evm_snapshot')
 }
 
-const advanceTimeAndBlock = async (time) => {
-  await advanceTime(time);
-  await advanceBlock()
+const revertSnapshot = async (id) => {
+  await send('evm_revert', [id])
+}
+
+const mineBlock = async (timestamp) => {
+  await send('evm_mine', [timestamp])
+}
+
+const increaseTime = async (seconds) => {
+  await send('evm_increaseTime', [seconds])
+  await mineBlock()
+}
+
+const minerStop = async () => {
+  await send('miner_stop', [])
+}
+
+const minerStart = async () => {
+  await send('miner_start', [])
 }
 
 module.exports = {
-  advanceTime,
-  advanceBlock,
-  advanceTimeAndBlock
+  takeSnapshot,
+  revertSnapshot,
+  mineBlock,
+  minerStop,
+  minerStart,
+  increaseTime,
 }
