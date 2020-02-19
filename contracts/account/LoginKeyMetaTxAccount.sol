@@ -42,17 +42,31 @@ contract LoginKeyMetaTxAccount is BaseMetaTxAccount {
             _loginKeyRestrictionsData
         );
 
-        (bytes32 _transactionMessageHash, bytes[] memory _returnValues) = _atomicExecuteMultipleMetaTransactions(
+        // Hash the parameters
+        bytes32 _transactionMessageHash = keccak256(abi.encode(
+            address(this),
+            msg.sig,
+            getChainId(),
+            nonce,
             _transactions,
             _gasPrice,
             _gasOverhead,
             _feeTokenAddress,
             _feeTokenRate
-        );
+        )).toEthSignedMessageHash();
 
         // Validate the signers
+        // NOTE: This must be done prior to the _atomicExecuteMultipleMetaTransactions() call for security purposes
         _validateLoginKeyMetaTransactionSigs(
             _transactionMessageHash, _transactionMessageHashSignature, _loginKeyRestrictionsData, _loginKeyAttestationSignature
+        );
+
+        (, bytes[] memory _returnValues) = _atomicExecuteMultipleMetaTransactions(
+            _transactions,
+            _gasPrice,
+            _gasOverhead,
+            _feeTokenAddress,
+            _feeTokenRate
         );
 
         // Refund gas costs

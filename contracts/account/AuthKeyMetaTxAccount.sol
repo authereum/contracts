@@ -31,17 +31,31 @@ contract AuthKeyMetaTxAccount is BaseMetaTxAccount {
     {
         uint256 _startGas = gasleft();
 
-        (bytes32 _transactionMessageHash, bytes[] memory _returnValues) = _atomicExecuteMultipleMetaTransactions(
+        // Hash the parameters
+        bytes32 _transactionMessageHash = keccak256(abi.encode(
+            address(this),
+            msg.sig,
+            getChainId(),
+            nonce,
             _transactions,
             _gasPrice,
             _gasOverhead,
             _feeTokenAddress,
             _feeTokenRate
-        );
+        )).toEthSignedMessageHash();
 
         // Validate the signer
+        // NOTE: This must be done prior to the _atomicExecuteMultipleMetaTransactions() call for security purposes
         _validateAuthKeyMetaTransactionSigs(
             _transactionMessageHash, _transactionMessageHashSignature
+        );
+
+        (, bytes[] memory _returnValues) = _atomicExecuteMultipleMetaTransactions(
+            _transactions,
+            _gasPrice,
+            _gasOverhead,
+            _feeTokenAddress,
+            _feeTokenRate
         );
 
         if (_shouldRefund(_transactions)) {

@@ -23,5 +23,5 @@ contract AuthereumAccount is
     AuthKeyMetaTxAccount,
     AccountUpgradeability
 {
-    string constant public authereumVersion = "2020010900";
+    string constant public authereumVersion = "2020021700";
 }
