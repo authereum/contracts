@@ -64,7 +64,7 @@ contract('Timelock', function (accounts) {
 
     // Set up Authereum ENS Manager defaults
     await utils.setAuthereumENSManagerDefaults(authereumEnsManager, AUTHEREUM_OWNER, authereumProxyFactoryLogicContract.address, constants.AUTHEREUM_PROXY_RUNTIME_CODE_HASH)
-    
+
     // Create default proxies
     label = constants.DEFAULT_LABEL
     expectedSalt = constants.SALT
@@ -82,7 +82,7 @@ contract('Timelock', function (accounts) {
 
     // Send relayer ETH to use as a transaction fee
     await authereumProxyAccount.sendTransaction({ value:constants.TWO_ETHER, from: AUTH_KEYS[0] })
-  
+
     nonce = await authereumProxyAccount.nonce()
     nonce = nonce.toNumber()
 
@@ -99,7 +99,7 @@ contract('Timelock', function (accounts) {
   beforeEach(async() => {
     snapshotId = await timeUtils.takeSnapshot();
   });
- 
+
   afterEach(async() => {
     await timeUtils.revertSnapshot(snapshotId.result);
   });
@@ -259,7 +259,7 @@ contract('Timelock', function (accounts) {
               name: '_timelock'
           }]
       }, [expectedNewTimelock.toString()]);
-    
+
 
       // Execute the change
       await timelockInstance.initiateChange(expectedNewData, timelockInstance.address)
@@ -288,7 +288,7 @@ contract('Timelock', function (accounts) {
               name: '_timelock'
           }]
       }, [expectedNewTimelockExpire.toString()]);
-    
+
 
       // Execute the change
       await timelockInstance.initiateChange(expectedNewData, timelockInstance.address)
@@ -450,7 +450,7 @@ contract('Timelock', function (accounts) {
       assert.equal(changeState, '2')
 
       await timelockInstance.executeChange(data, RECEIVER)
-      
+
       // Check state
       changeState = await timelockInstance.getCurrentChangeState.call(data, RECEIVER)
       assert.equal(changeState, '0')
@@ -476,7 +476,7 @@ contract('Timelock', function (accounts) {
       // Check state
       const changeState = await timelockInstance.getCurrentChangeState.call(data, RECEIVER)
       assert.equal(changeState, '3')
-      
+
       // Check the logs
       var { logs } = await timelockInstance.cancelChange(data, RECEIVER)
       try {

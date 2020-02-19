@@ -42,7 +42,7 @@ contract('ERC1271Account', function (accounts) {
 
     // Set up Authereum ENS Manager defaults
     await utils.setAuthereumENSManagerDefaults(authereumEnsManager, AUTHEREUM_OWNER, authereumProxyFactoryLogicContract.address, constants.AUTHEREUM_PROXY_RUNTIME_CODE_HASH)
-    
+
     // Create default proxies
     expectedSalt = constants.SALT
     label = constants.DEFAULT_LABEL
@@ -60,7 +60,7 @@ contract('ERC1271Account', function (accounts) {
   beforeEach(async() => {
     snapshotId = await timeUtils.takeSnapshot();
   });
- 
+
   afterEach(async() => {
     await timeUtils.revertSnapshot(snapshotId.result);
   });

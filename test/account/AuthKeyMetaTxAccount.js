@@ -5,6 +5,7 @@ const constants = require('../utils/constants.js')
 const timeUtils = require('../utils/time.js')
 
 const ArtifactBadTransaction = artifacts.require('BadTransaction')
+const ArtifactReturnTransaction = artifacts.require('ReturnTransaction')
 const ArtifactAuthereumAccount = artifacts.require('AuthereumAccount')
 const ArtifactAuthereumProxy = artifacts.require('AuthereumProxy')
 const ArtifactAuthereumProxyFactory = artifacts.require('AuthereumProxyFactory')
@@ -21,6 +22,8 @@ contract('AuthKeyMetaTxAccount', function (accounts) {
 
   // Token Params
   const DEFAULT_TOKEN_SUPPLY = constants.DEFAULT_TOKEN_SUPPLY
+  const DEFAULT_TOKEN_SYMBOL = constants.DEFAULT_TOKEN_SYMBOL
+  const DEFAULT_TOKEN_NAME = constants.DEFAULT_TOKEN_NAME
   const DEFAULT_TOKEN_DECIMALS = constants.DEFAULT_TOKEN_DECIMALS
 
   // Test Params
@@ -66,7 +69,7 @@ contract('AuthKeyMetaTxAccount', function (accounts) {
     const { authereumEnsManager } = await utils.setENSDefaults(AUTHEREUM_OWNER)
 
     // Message signature
-    MSG_SIG = await utils.getexecuteMultipleAuthKeyMetaTransactionsSig('2019111500')
+    MSG_SIG = await utils.getexecuteMultipleAuthKeyMetaTransactionsSig('2020021700')
 
     // Create Logic Contracts
     authereumAccountLogicContract = await ArtifactAuthereumAccount.new()
@@ -76,7 +79,7 @@ contract('AuthKeyMetaTxAccount', function (accounts) {
 
     // Set up Authereum ENS Manager defaults
     await utils.setAuthereumENSManagerDefaults(authereumEnsManager, AUTHEREUM_OWNER, authereumProxyFactoryLogicContract.address, constants.AUTHEREUM_PROXY_RUNTIME_CODE_HASH)
-    
+
     // Create default proxies
     label = constants.DEFAULT_LABEL
     expectedSalt = constants.SALT
@@ -89,12 +92,13 @@ contract('AuthKeyMetaTxAccount', function (accounts) {
 
     // Wrap in truffle-contract
     badContract = await ArtifactBadTransaction.new()
+    returnTransaction = await ArtifactReturnTransaction.new()
     authereumProxy = await ArtifactAuthereumProxy.at(expectedAddress)
     authereumProxyAccount = await ArtifactAuthereumAccount.at(expectedAddress)
 
     // Send relayer ETH to use as a transaction fee
     await authereumProxyAccount.sendTransaction({ value:constants.TWO_ETHER, from: AUTH_KEYS[0] })
-  
+
     nonce = await authereumProxyAccount.nonce()
     nonce = nonce.toNumber()
 
@@ -130,7 +134,7 @@ contract('AuthKeyMetaTxAccount', function (accounts) {
   beforeEach(async() => {
     snapshotId = await timeUtils.takeSnapshot();
   });
- 
+
   afterEach(async() => {
     await timeUtils.revertSnapshot(snapshotId.result);
   });
@@ -299,7 +303,7 @@ contract('AuthKeyMetaTxAccount', function (accounts) {
         await authereumProxyAccount.executeMultipleAuthKeyMetaTransactions(
           _transactions, gasPrice, gasOverhead, feeTokenAddress, feeTokenRate, _transactionMessageHashSignature, { from: RELAYER, gasPrice: gasPrice }
         )
-        
+
         // Get the new nonce
         const newNonce = await authereumProxyAccount.nonce()
 
@@ -308,7 +312,7 @@ contract('AuthKeyMetaTxAccount', function (accounts) {
       })
       it('Should successfully execute an auth key meta transaction and pay fees in tokens', async () => {
         // Create a token for use in fee payments
-        const authereumERC20 = await ArtifactTestERC20.new([authereumProxyAccount.address], DEFAULT_TOKEN_SUPPLY, DEFAULT_TOKEN_DECIMALS)
+        const authereumERC20 = await ArtifactTestERC20.new([authereumProxyAccount.address], DEFAULT_TOKEN_SUPPLY, DEFAULT_TOKEN_SYMBOL, DEFAULT_TOKEN_NAME, DEFAULT_TOKEN_DECIMALS)
 
         await authereumProxyAccount.sendTransaction({ value: constants.THREE_ETHER, from: AUTH_KEYS[0] })
         const beforeRelayerBal = await balance.current(RELAYER)
@@ -355,7 +359,7 @@ contract('AuthKeyMetaTxAccount', function (accounts) {
       })
       it('Should successfully verify and sign two transactions (batched)', async () => {
         // Create a token for use in fee payments
-        const authereumERC20 = await ArtifactTestERC20.new([authereumProxyAccount.address], DEFAULT_TOKEN_SUPPLY, DEFAULT_TOKEN_DECIMALS)
+        const authereumERC20 = await ArtifactTestERC20.new([authereumProxyAccount.address], DEFAULT_TOKEN_SUPPLY, DEFAULT_TOKEN_SYMBOL, DEFAULT_TOKEN_NAME, DEFAULT_TOKEN_DECIMALS)
 
         await authereumProxyAccount.send(constants.THREE_ETHER, {from: AUTH_KEYS[0]})
 
@@ -415,7 +419,7 @@ contract('AuthKeyMetaTxAccount', function (accounts) {
         // Create a token for use in fee payments
         const nonStandardDecimals = 9
         const _tokenSupply = 10000000000
-        const authereumERC20 = await ArtifactTestERC20.new([authereumProxyAccount.address], _tokenSupply, nonStandardDecimals)
+        const authereumERC20 = await ArtifactTestERC20.new([authereumProxyAccount.address], _tokenSupply, DEFAULT_TOKEN_SYMBOL, DEFAULT_TOKEN_NAME, nonStandardDecimals)
         await authereumProxyAccount.sendTransaction({ value: constants.THREE_ETHER, from: AUTH_KEYS[0] })
 
         const beforeRelayerBal = await balance.current(RELAYER)
@@ -513,14 +517,14 @@ contract('AuthKeyMetaTxAccount', function (accounts) {
         const afterRelayerBal = await balance.current(RELAYER)
         const afterAccountBal = await balance.current(authereumProxyAccount.address)
 
-        // CBA loses 1 ETH (and doesn't 
+        // CBA loses 1 ETH (and doesn't
         assert.equal(Number(beforeAccountBal), Number(afterAccountBal))
         // Relayer starts and ends with the same value minus a small amount
         assert.closeTo(Number(afterRelayerBal) - Number(beforeRelayerBal), 0, constants.FEE_VARIANCE)
       })
       it('Should send two transactions to self and not pay any fees (relayer pays all fees)', async () => {
         // Create a token for use in fee payments
-        const authereumERC20 = await ArtifactTestERC20.new([authereumProxyAccount.address], DEFAULT_TOKEN_SUPPLY, DEFAULT_TOKEN_DECIMALS)
+        const authereumERC20 = await ArtifactTestERC20.new([authereumProxyAccount.address], DEFAULT_TOKEN_SUPPLY, DEFAULT_TOKEN_SYMBOL, DEFAULT_TOKEN_NAME, DEFAULT_TOKEN_DECIMALS)
 
         await authereumProxyAccount.send(constants.THREE_ETHER, {from: AUTH_KEYS[0]})
 
@@ -568,6 +572,77 @@ contract('AuthKeyMetaTxAccount', function (accounts) {
         assert.equal(Number(beforeAccountBal), Number(afterAccountBal))
         // Reelayer pays the fee for both transactions
         assert.closeTo(Number(afterRelayerBal), Number(beforeRelayerBal), constants.FEE_VARIANCE)
+      })
+      it('Should successfully execute an auth key meta transaction and return the appropriate data', async () => {
+        await authereumProxyAccount.sendTransaction({ value: constants.THREE_ETHER, from: AUTH_KEYS[0] })
+
+        // Convert to transactions array
+        const _destination = returnTransaction.address
+        // This is the calldata for returnTest()
+        const _data = '0x57ecc147'
+        const _encodedParameters = await utils.encodeTransactionParams(_destination, value, gasLimit, _data)
+        const _transactions = [_encodedParameters]
+
+        // Get default signedMessageHash and signedLoginKey
+        const _transactionMessageHashSignature = await utils.getAuthKeySignedMessageHash(
+          authereumProxyAccount.address,
+          MSG_SIG,
+          constants.CHAIN_ID,
+          nonce,
+          _transactions,
+          gasPrice,
+          gasOverhead,
+          feeTokenAddress,
+          feeTokenRate
+        )
+
+        // NOTE: This is simply calling the function in order to get the return data
+        const returnData = await authereumProxyAccount.executeMultipleAuthKeyMetaTransactions.call(
+          _transactions, gasPrice, gasOverhead, feeTokenAddress, feeTokenRate, _transactionMessageHashSignature, { from: RELAYER, gasPrice: gasPrice }
+        )
+
+        // Returns the bytes[] hex version of 123
+        const _expectedReturnData = ['0x000000000000000000000000000000000000000000000000000000000000007b']
+        expect(returnData).to.eql(_expectedReturnData)
+      })
+      it('Should successfully execute an auth key meta transaction with 2 transactions and return the appropriate data', async () => {
+        await authereumProxyAccount.sendTransaction({ value: constants.THREE_ETHER, from: AUTH_KEYS[0] })
+
+        // Convert to transactions array
+        const _destination = returnTransaction.address
+        // This is the calldata for returnTest()
+        const _data = '0x57ecc147'
+        const _encodedParameters = await utils.encodeTransactionParams(_destination, value, gasLimit, _data)
+        const _transactions = [_encodedParameters]
+
+        // Transaction 2 Setup
+        // Convert to transactions array
+        const __encodedParameters = await utils.encodeTransactionParams(_destination, value, gasLimit, _data)
+        let __transactions = _transactions.slice(0)
+        __transactions.push(__encodedParameters)
+
+
+        // Get default signedMessageHash and signedLoginKey
+        const _transactionMessageHashSignature = await utils.getAuthKeySignedMessageHash(
+          authereumProxyAccount.address,
+          MSG_SIG,
+          constants.CHAIN_ID,
+          nonce,
+          __transactions,
+          gasPrice,
+          gasOverhead,
+          feeTokenAddress,
+          feeTokenRate
+        )
+
+        // NOTE: This is simply calling the function in order to get the return data
+        const returnData = await authereumProxyAccount.executeMultipleAuthKeyMetaTransactions.call(
+          __transactions, gasPrice, gasOverhead, feeTokenAddress, feeTokenRate, _transactionMessageHashSignature, { from: RELAYER, gasPrice: gasPrice }
+        )
+
+        // Returns the bytes[] hex version of 123 twice
+        const _expectedReturnData = ['0x000000000000000000000000000000000000000000000000000000000000007b', '0x000000000000000000000000000000000000000000000000000000000000007b']
+        expect(returnData).to.eql(_expectedReturnData)
       })
     })
     context('Non-Happy Path', async () => {
@@ -731,7 +806,7 @@ contract('AuthKeyMetaTxAccount', function (accounts) {
         })
         it('Should refund the relayer even though one (of two) transactions is sent to self', async () => {
           // Create a token for use in fee payments
-          const authereumERC20 = await ArtifactTestERC20.new([authereumProxyAccount.address], DEFAULT_TOKEN_SUPPLY, DEFAULT_TOKEN_DECIMALS)
+          const authereumERC20 = await ArtifactTestERC20.new([authereumProxyAccount.address], DEFAULT_TOKEN_SUPPLY, DEFAULT_TOKEN_SYMBOL, DEFAULT_TOKEN_NAME, DEFAULT_TOKEN_DECIMALS)
 
           await authereumProxyAccount.send(constants.THREE_ETHER, {from: AUTH_KEYS[0]})
 
@@ -889,16 +964,16 @@ contract('AuthKeyMetaTxAccount', function (accounts) {
         })
         it('Should throw and cost the relayer if the account does not send a large enough gasLimit (tokens)', async () => {
           // Create a token for use in fee payments. Don't mint any tokens.
-          const authereumERC20 = await ArtifactTestERC20.new([authereumProxyAccount.address], 0, DEFAULT_TOKEN_DECIMALS)
+          const authereumERC20 = await ArtifactTestERC20.new([authereumProxyAccount.address], 0, DEFAULT_TOKEN_SYMBOL, DEFAULT_TOKEN_NAME, DEFAULT_TOKEN_DECIMALS)
 
           await authereumProxyAccount.sendTransaction({ value: constants.THREE_ETHER, from: AUTH_KEYS[0] })
 
           // Convert to transactions array
           let _feeTokenAddress = authereumERC20.address
-  
+
           const _encodedParameters = await utils.encodeTransactionParams(destination, value, gasLimit, data)
           const _transactions = [_encodedParameters]
-  
+
           // Get default signedMessageHash and signedLoginKey
           const _transactionMessageHashSignature = await utils.getAuthKeySignedMessageHash(
             authereumProxyAccount.address,
@@ -911,23 +986,23 @@ contract('AuthKeyMetaTxAccount', function (accounts) {
             _feeTokenAddress,
             feeTokenRate
           )
-  
+
           await expectRevert(authereumProxyAccount.executeMultipleAuthKeyMetaTransactions(
             _transactions, gasPrice, gasOverhead, _feeTokenAddress, feeTokenRate, _transactionMessageHashSignature, { from: RELAYER, gasPrice: gasPrice }
           ), constants.REVERT_MSG.BA_INSUFFICIENT_GAS_TOKEN)
         })
         it('Should revert due to the fact that the relayer used a different token address than expected', async () => {
           // Create a token for use in fee payments
-          const authereumERC20 = await ArtifactTestERC20.new([authereumProxyAccount.address], DEFAULT_TOKEN_SUPPLY, DEFAULT_TOKEN_DECIMALS)
-          const fakeERC20 = await ArtifactTestERC20.new([RELAYER], DEFAULT_TOKEN_SUPPLY, DEFAULT_TOKEN_DECIMALS)
+          const authereumERC20 = await ArtifactTestERC20.new([authereumProxyAccount.address], DEFAULT_TOKEN_SUPPLY, DEFAULT_TOKEN_SYMBOL, DEFAULT_TOKEN_NAME, DEFAULT_TOKEN_DECIMALS)
+          const fakeERC20 = await ArtifactTestERC20.new([RELAYER], DEFAULT_TOKEN_SUPPLY, DEFAULT_TOKEN_SYMBOL, DEFAULT_TOKEN_NAME, DEFAULT_TOKEN_DECIMALS)
           await authereumProxyAccount.sendTransaction({ value: constants.THREE_ETHER, from: AUTH_KEYS[0] })
 
           // Convert to transactions array
           let _feeTokenAddress = authereumERC20.address
-  
+
           const _encodedParameters = await utils.encodeTransactionParams(destination, value, gasLimit, data)
           const _transactions = [_encodedParameters]
-  
+
           // Get default signedMessageHash and signedLoginKey
           const _transactionMessageHashSignature = await utils.getAuthKeySignedMessageHash(
             authereumProxyAccount.address,
@@ -940,7 +1015,7 @@ contract('AuthKeyMetaTxAccount', function (accounts) {
             _feeTokenAddress,
             feeTokenRate
           )
-  
+
           // This is the fake relayer token
           _feeTokenAddress = fakeERC20.address
           await expectRevert(authereumProxyAccount.executeMultipleAuthKeyMetaTransactions(
@@ -949,15 +1024,15 @@ contract('AuthKeyMetaTxAccount', function (accounts) {
         })
         it('Should revert due to the fact that the relayer used a different token rate than expected', async () => {
           // Create a token for use in fee payments
-          const authereumERC20 = await ArtifactTestERC20.new([authereumProxyAccount.address], DEFAULT_TOKEN_SUPPLY, DEFAULT_TOKEN_DECIMALS)
+          const authereumERC20 = await ArtifactTestERC20.new([authereumProxyAccount.address], DEFAULT_TOKEN_SUPPLY, DEFAULT_TOKEN_SYMBOL, DEFAULT_TOKEN_NAME, DEFAULT_TOKEN_DECIMALS)
           await authereumProxyAccount.sendTransaction({ value: constants.THREE_ETHER, from: AUTH_KEYS[0] })
 
           // Convert to transactions array
           let _feeTokenAddress = authereumERC20.address
-  
+
           const _encodedParameters = await utils.encodeTransactionParams(destination, value, gasLimit, data)
           const _transactions = [_encodedParameters]
-  
+
           // Get default signedMessageHash and signedLoginKey
           const _transactionMessageHashSignature = await utils.getAuthKeySignedMessageHash(
             authereumProxyAccount.address,
@@ -970,7 +1045,7 @@ contract('AuthKeyMetaTxAccount', function (accounts) {
             _feeTokenAddress,
             feeTokenRate
           )
-  
+
           // This is the fake relayer token rate
           const _feeTokenRate = 99999999999
           await expectRevert(authereumProxyAccount.executeMultipleAuthKeyMetaTransactions(

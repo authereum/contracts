@@ -118,20 +118,20 @@ const setENSDefaults = async (authereumOwner) => {
 
   const timelockContractAddress = '0x6c36a7EE3c2DCA0E1ebE20Fa26c2B76841286eF6' // Arbitrary for now
   const ethLabel = 'eth'
-  const authereumLabel = 'authereum'
+  const authLabel = 'auth'
   const reverseLabel = 'reverse'
   const addrLabel = 'addr'
-  const authereumDotEthDomain = authereumLabel + '.' + ethLabel
+  const authDotEthDomain = authLabel + '.' + ethLabel
 
   // Hashes
   const ethHash = web3.utils.soliditySha3(ethLabel)
-  const authereumHash = web3.utils.soliditySha3(authereumLabel)
+  const authHash = web3.utils.soliditySha3(authLabel)
   const reverseHash = web3.utils.soliditySha3(reverseLabel)
   const addrHash = web3.utils.soliditySha3(addrLabel)
 
   // Nodes
   const ethTldNode = namehash.hash(ethLabel)
-  const authereumDotEthNode = namehash.hash(authereumDotEthDomain)
+  const authereumDotEthNode = namehash.hash(authDotEthDomain)
   const reverseTldNode = namehash.hash(reverseLabel)
 
   // Deploy contracts
@@ -142,15 +142,15 @@ const setENSDefaults = async (authereumOwner) => {
   authereumEnsResolverProxy = await ArtifactAuthereumEnsResolverProxy.new(authereumEnsResolverLogicContract.address, { from: authereumOwner })
   authereumEnsResolver = await ArtifactAuthereumEnsResolver.at(authereumEnsResolverProxy.address)
   ensReverseRegistrar = await ArtifactEnsReverseRegistrar.new(ensRegistry.address, authereumEnsResolver.address, { from: authereumOwner })
-  authereumEnsManager = await ArtifactAuthereumEnsManager.new(authereumDotEthDomain, authereumDotEthNode, ensRegistry.address, authereumEnsResolver.address, { from: authereumOwner })
+  authereumEnsManager = await ArtifactAuthereumEnsManager.new(authDotEthDomain, authereumDotEthNode, ensRegistry.address, authereumEnsResolver.address, { from: authereumOwner })
 
   // Setup up contracts to mimic mainnet
   await ensRegistry.setSubnodeOwner(constants.HASH_ZERO, reverseHash, authereumOwner, { from: authereumOwner })
   await ensRegistry.setSubnodeOwner(reverseTldNode, addrHash, ensReverseRegistrar.address, { from: authereumOwner })
 
-  // Claim authereum.eth. Give it to the Authereum ENS Manager.
+  // Claim auth.eth. Give it to the Authereum ENS Manager.
   await ensRegistry.setSubnodeOwner(constants.HASH_ZERO, ethHash, authereumOwner, { from: authereumOwner })
-  await ensRegistry.setSubnodeOwner(ethTldNode, authereumHash, authereumEnsManager.address, { from: authereumOwner })
+  await ensRegistry.setSubnodeOwner(ethTldNode, authHash, authereumEnsManager.address, { from: authereumOwner })
 
   // // Set up Authereum managers
   await authereumEnsResolver.addManager(authereumOwner, { from: authereumOwner })
@@ -169,7 +169,7 @@ const setAuthereumENSManagerDefaults = async (authereumEnsManager, authereumOwne
 
 const getReverseNode = async (nodeOwner) => {
   const ADDR_REVERSE_NODE = '0x91d1777781884d03a6757a803996e38de2a42967fb37eeaca72729271025a9e2'
-  let sha3HexAddressUserZero = web3.utils.soliditySha3( 
+  let sha3HexAddressUserZero = web3.utils.soliditySha3(
     { t: 'string', v: nodeOwner.slice(2).toLowerCase() }
   )
 
@@ -277,11 +277,11 @@ const getAuthereumAccountCreationDataWithUpgradeWithInit = async (authKey) => {
 }
 
 const createProxy = async (
-  salt, 
-  txOrigin, 
-  authereumProxyFactory, 
-  authKey, 
-  label, 
+  salt,
+  txOrigin,
+  authereumProxyFactory,
+  authKey,
+  label,
   logicContractAddress
 ) => {
   const saltHash = getSaltHash(salt, txOrigin)
@@ -295,11 +295,11 @@ const createProxy = async (
 }
 
 const createDefaultProxy = async (
-  salt, 
-  txOrigin, 
-  authereumProxyFactory, 
-  authKey, 
-  label, 
+  salt,
+  txOrigin,
+  authereumProxyFactory,
+  authKey,
+  label,
   authereumAccountLogicContractAddress
 ) => {
   return await createProxy(
@@ -343,7 +343,9 @@ const getexecuteMultipleAuthKeyMetaTransactionsSig = async (versionNumber) => {
   } else if (versionNumber === '2019111500' ||
              versionNumber === '2019122000' ||
              versionNumber === '2019122100' ||
-             versionNumber === '2020010900'
+             versionNumber === '2020010900' ||
+             versionNumber === '2020020200' ||
+             versionNumber === '2020021700'
   ) {
     return await web3.eth.abi.encodeFunctionSignature({
         name: 'executeMultipleAuthKeyMetaTransactions',
@@ -401,7 +403,9 @@ const getexecuteMultipleLoginKeyMetaTransactionsSig = async (versionNumber) => {
   } else if (versionNumber === '2019111500' ||
              versionNumber === '2019122000' ||
              versionNumber === '2019122100' ||
-             versionNumber === '2020010900'
+             versionNumber === '2020010900' ||
+             versionNumber === '2020020200' ||
+             versionNumber === '2020021700'
     ) {
     return await web3.eth.abi.encodeFunctionSignature({
         name: 'executeMultipleLoginKeyMetaTransactions',

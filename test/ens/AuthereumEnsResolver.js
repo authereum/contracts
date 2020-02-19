@@ -27,7 +27,7 @@ contract('AuthereumEnsResolver', function (accounts) {
   const desiredPubkeyY = '0x0000000000000000000000000000000000000000000000000000000000000002'
   const desiredTextKey = 'Hello'
   const desiredTextValue = 'World'
-  
+
   // Interfaces
   const interfaceMetaId = '0x01ffc9a7'
   const addrInterfaceId = '0x3b3b57de'
@@ -91,7 +91,7 @@ contract('AuthereumEnsResolver', function (accounts) {
   beforeEach(async() => {
     snapshotId = await timeUtils.takeSnapshot();
   });
- 
+
   afterEach(async() => {
     await timeUtils.revertSnapshot(snapshotId.result);
   });
@@ -181,23 +181,23 @@ contract('AuthereumEnsResolver', function (accounts) {
       it('Should return true for meta interface', async () => {
         const res = await authereumEnsResolver.supportsInterface(interfaceMetaId)
         assert.equal(res, true)
-      }); 
+      });
       it('Should return true for addr interface', async () => {
         const res = await authereumEnsResolver.supportsInterface(addrInterfaceId)
         assert.equal(res, true)
-      }); 
+      });
       it('Should return true for name interface', async () => {
         const res = await authereumEnsResolver.supportsInterface(nameInterfaceId)
         assert.equal(res, true)
-      }); 
+      });
       it("Should return true for text interface", async () => {
         const res = await authereumEnsResolver.supportsInterface(textInterfaceId)
         assert.equal(res, true)
-      }); 
+      });
       it("Should return true for contenthash", async () => {
         const res = await authereumEnsResolver.supportsInterface(contenthashInterfaceId)
         assert.equal(res, true)
-      }); 
+      });
     });
   });
   describe('End to end', () => {

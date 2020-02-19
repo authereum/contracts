@@ -61,7 +61,7 @@ contract('AuthereumAccount', function (accounts) {
     const { authereumEnsManager } = await utils.setENSDefaults(AUTHEREUM_OWNER)
 
     // Message Signature
-    MSG_SIG = await utils.getexecuteMultipleAuthKeyMetaTransactionsSig('2019111500')
+    MSG_SIG = await utils.getexecuteMultipleAuthKeyMetaTransactionsSig('2020021700')
 
     // Create Logic Contracts
     authereumAccountLogicContract = await ArtifactAuthereumAccount.new()
@@ -71,7 +71,7 @@ contract('AuthereumAccount', function (accounts) {
 
     // Set up Authereum ENS Manager defaults
     await utils.setAuthereumENSManagerDefaults(authereumEnsManager, AUTHEREUM_OWNER, authereumProxyFactoryLogicContract.address, constants.AUTHEREUM_PROXY_RUNTIME_CODE_HASH)
-    
+
     // Create default proxies
     label = constants.DEFAULT_LABEL
     expectedSalt = constants.SALT
@@ -125,7 +125,7 @@ contract('AuthereumAccount', function (accounts) {
   beforeEach(async() => {
     snapshotId = await timeUtils.takeSnapshot();
   });
- 
+
   afterEach(async() => {
     await timeUtils.revertSnapshot(snapshotId.result);
   });
@@ -150,7 +150,7 @@ contract('AuthereumAccount', function (accounts) {
         const _label = 'myNamess'
         const _expectedSalt = constants.SALT + 20
         expectedAddress = await utils.createProxy(
-          _expectedSalt, accounts[0], authereumProxyFactoryLogicContract, 
+          _expectedSalt, accounts[0], authereumProxyFactoryLogicContract,
           AUTH_KEYS[0], _label, authereumAccountLogicContract.address
         )
 
@@ -159,7 +159,7 @@ contract('AuthereumAccount', function (accounts) {
         // Test that the Chain ID is set and that the proxy has been deployed
         const chainId = await _authereumProxyAccount.getChainId.call()
         assert.equal(constants.CHAIN_ID, chainId)
-        
+
         // Test that the authKeys mapping has been updated with the expected authKey
         const isAuthKey = await _authereumProxyAccount.authKeys.call(AUTH_KEYS[0])
         assert.equal(isAuthKey, true)
@@ -168,11 +168,11 @@ contract('AuthereumAccount', function (accounts) {
         // Test that the Chain ID is set and that the proxy has been deployed
         const chainId = await authereumProxyAccount.getChainId.call()
         assert.equal(constants.CHAIN_ID, chainId)
-        
+
         // Test that the authKeys mapping has been updated with the expected authKey
         let isAuthKey = await authereumProxyAccount.authKeys.call(AUTH_KEYS[0])
         assert.equal(isAuthKey, true)
-        
+
         // Test that the upgraded contact function, upgradeTest(), does not yet exist
         try {
           await authereumProxyAccount.upgradeTest.call()
@@ -206,14 +206,14 @@ contract('AuthereumAccount', function (accounts) {
         const _label = constants.DEFAULT_LABEL
         const _expectedSalt = constants.SALT + 21
         await expectRevert(utils.createProxy(
-          _expectedSalt, accounts[0], authereumProxyFactoryLogicContract, 
+          _expectedSalt, accounts[0], authereumProxyFactoryLogicContract,
           AUTH_KEYS[0], _label, authereumAccountLogicContract.address
         ), constants.REVERT_MSG.GENERAL_REVERT)
       })
       it('Should not allow Authereum to upgrade a proxy for a user', async () => {
         await expectRevert(authereumAccountLogicContract.upgradeToAndCall(
           authereumProxyAccountUpgradeLogicContract.address, constants.HASH_ZERO
-        ), constants.REVERT_MSG.GENERAL_REVERT) 
+        ), constants.REVERT_MSG.GENERAL_REVERT)
       })
     })
   })

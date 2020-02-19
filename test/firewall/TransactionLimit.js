@@ -66,7 +66,7 @@
 
 //     // Set up Authereum ENS Manager defaults
 //     await utils.setAuthereumENSManagerDefaults(authereumEnsManager, AUTHEREUM_OWNER, authereumProxyFactoryLogicContract.address, constants.AUTHEREUM_PROXY_RUNTIME_CODE_HASH)
-    
+
 //     // Create default proxies
 //     label = constants.DEFAULT_LABEL
 //     expectedSalt = constants.SALT
@@ -84,7 +84,7 @@
 
 //     // Send relayer ETH to use as a transaction fee
 //     await authereumProxyAccount.sendTransaction({ value:constants.TWO_ETHER, from: AUTH_KEYS[0] })
-  
+
 //     nonce = await authereumProxyAccount.nonce()
 //     nonce = nonce.toNumber()
 
@@ -99,7 +99,7 @@
 //   beforeEach(async() => {
 //     snapshotId = await timeUtils.takeSnapshot();
 //   });
- 
+
 //   afterEach(async() => {
 //     await timeUtils.revertSnapshot(snapshotId.result);
 //   });
@@ -132,7 +132,7 @@
 //         const currentBlock = await web3.eth.getBlockNumber()
 //         const blockData = await web3.eth.getBlock(currentBlock)
 //         const currentDay = Math.floor(blockData.timestamp / 86400)
-        
+
 //         assert.equal(Number(day), currentDay)
 //       })
 //       it('Should get the current day, advance a few seconds, and return the same day', async () => {
@@ -142,7 +142,7 @@
 //         const currentBlock = await web3.eth.getBlockNumber()
 //         const blockData = await web3.eth.getBlock(currentBlock)
 //         const currentDay = Math.floor(blockData.timestamp / 86400)
-        
+
 //         await timeUtils.increaseTime(2)
 //         const sameDay = await authereumProxyAccount.getCurrentDay({ from: AUTH_KEYS[0] })
 //         assert.equal(Number(day), currentDay)
@@ -155,7 +155,7 @@
 //         const currentBlock = await web3.eth.getBlockNumber()
 //         const blockData = await web3.eth.getBlock(currentBlock)
 //         const currentDay = Math.floor(blockData.timestamp / 86400)
-        
+
 //         const numDaysToPass = 3
 //         const newDayTime = numDaysToPass * 86400
 //         await timeUtils.increaseTime(newDayTime)

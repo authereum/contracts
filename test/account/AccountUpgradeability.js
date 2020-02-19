@@ -64,7 +64,7 @@ contract('AccountUpgradeability', function (accounts) {
     const { authereumEnsManager } = await utils.setENSDefaults(AUTHEREUM_OWNER)
 
     // Message signature
-    MSG_SIG = await utils.getexecuteMultipleAuthKeyMetaTransactionsSig('2019111500')
+    MSG_SIG = await utils.getexecuteMultipleAuthKeyMetaTransactionsSig('2020021700')
 
     // Create Logic Contracts
     authereumAccountLogicContract = await ArtifactAuthereumAccount.new()
@@ -74,7 +74,7 @@ contract('AccountUpgradeability', function (accounts) {
 
     // Set up Authereum ENS Manager defaults
     await utils.setAuthereumENSManagerDefaults(authereumEnsManager, AUTHEREUM_OWNER, authereumProxyFactoryLogicContract.address, constants.AUTHEREUM_PROXY_RUNTIME_CODE_HASH)
-    
+
     // Create default proxies
     label = constants.DEFAULT_LABEL
     expectedSalt = constants.SALT
@@ -92,7 +92,7 @@ contract('AccountUpgradeability', function (accounts) {
 
     // Send relayer ETH to use as a transaction fee
     await authereumProxyAccount.sendTransaction({ value:constants.TWO_ETHER, from: AUTH_KEYS[0] })
-  
+
     // Generate params
     nonce = await authereumProxyAccount.nonce()
     nonce = nonce.toNumber()
@@ -112,7 +112,7 @@ contract('AccountUpgradeability', function (accounts) {
       type: 'function',
       inputs: []
     }, [])
-  
+
     data = utils.encodeUpgradeToAndCall(
       authereumProxyAccountUpgradeWithInitLogicContract.address, implementationData
     )
@@ -140,7 +140,7 @@ contract('AccountUpgradeability', function (accounts) {
   beforeEach(async() => {
     snapshotId = await timeUtils.takeSnapshot();
   });
- 
+
   afterEach(async() => {
     await timeUtils.revertSnapshot(snapshotId.result);
   });
@@ -220,7 +220,7 @@ contract('AccountUpgradeability', function (accounts) {
           type: 'function',
           inputs: []
         }, [])
-      
+
         const _data = utils.encodeUpgradeToAndCall(
             authereumProxyAccountUpgradeWithInitLogicContract.address, implementationData
           )
@@ -273,10 +273,54 @@ contract('AccountUpgradeability', function (accounts) {
           type: 'function',
           inputs: []
         }, [])
-        
+
         await expectRevert(
           authereumAccountLogicContract.upgradeToAndCall(accounts[8], implementationData, { from: accounts[0] }
         ), constants.REVERT_MSG.BA_REQUIRE_SELF)
+      })
+      it('Should not allow an arbitrary account to upgrade through executeMultipleAuthKeyMetaTransactions()', async () => {
+        // Confirm that auth key is not yet added
+        let _authKey = await authereumProxyAccount.authKeys(AUTH_KEYS[1])
+        assert.equal(_authKey, false)
+
+        // Set up transaction to add an auth key
+        const _destination = authereumProxyAccount.address
+        // Get upgrade data
+        const _data = await web3.eth.abi.encodeFunctionCall({
+          name: 'upgradeTestInit',
+          type: 'function',
+          inputs: []
+        }, [])
+
+        // Convert to transactions array
+        const _encodedParameters = await utils.encodeTransactionParams(_destination, value, gasLimit, _data)
+        const _transactions = [_encodedParameters]
+
+        // Get default signedMessageHash and signedLoginKey
+        // NOTE: The signing is done here manually (as oppsoed to calling utils.getAuthKeySignedMessageHash()) in
+        // order to sign with the malicious signer
+        let encodedParams = await web3.eth.abi.encodeParameters(
+          ['address', 'bytes4', 'uint256', 'uint256', 'bytes[]', 'uint256', 'uint256', 'address', 'uint256'],
+          [
+            authereumProxyAccount.address,
+            MSG_SIG,
+            constants.CHAIN_ID,
+            nonce,
+            _transactions,
+            gasPrice,
+            gasOverhead,
+            feeTokenAddress,
+            feeTokenRate
+          ]
+        )
+        let unsignedMessageHash = await web3.utils.soliditySha3(encodedParams)
+        const MALICIOUS_PRIV_KEY = '0xb0057716d5917badaf911b193b12b910811c1497b5bada8d7711f758981c3773'
+        let sigedMsg = web3.eth.accounts.sign(unsignedMessageHash, MALICIOUS_PRIV_KEY)
+        const _transactionMessageHashSignature = sigedMsg.signature
+
+        await expectRevert(authereumProxyAccount.executeMultipleAuthKeyMetaTransactions(
+          _transactions, gasPrice, gasOverhead, feeTokenAddress, feeTokenRate, _transactionMessageHashSignature, { from: RELAYER, gasPrice: gasPrice }
+        ), constants.REVERT_MSG.AKMTA_AUTH_KEY_INVALID)
       })
       it('Should not allow a proxy\'s to upgrade w/ init in an incorrect order', async () => {
         // Set up params
@@ -297,7 +341,7 @@ contract('AccountUpgradeability', function (accounts) {
             name: '_authKey'
           }]
         }, [AUTH_KEYS[0]])
-      
+
         const _data = utils.encodeUpgradeToAndCall(
             authereumProxyAccountUpgradeWithInitLogicContract.address, implementationData
           )

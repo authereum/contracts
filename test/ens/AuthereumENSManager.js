@@ -21,7 +21,7 @@ contract('AuthereumEnsManager', function (accounts) {
   const AUTH_KEYS = [accounts[2], accounts[3], accounts[4], accounts[5]]
   const NEW_PROXY_FACTORY = accounts[6]
   const PROXY_FACTORY = accounts[0]
-  
+
   const timelockContractAddress = '0x6c36a7EE3c2DCA0E1ebE20Fa26c2B76841286eF6' // Arbitrary for now
 
   // Test Params
@@ -37,7 +37,7 @@ contract('AuthereumEnsManager', function (accounts) {
 
   // Labels
   const ethLabel = 'eth'
-  const authereumLabel = 'authereum'
+  const authLabel = 'auth'
   const reverseLabel = 'reverse'
   const addrLabel = 'addr'
   const testLabel = 'test'
@@ -45,14 +45,14 @@ contract('AuthereumEnsManager', function (accounts) {
   const unclaimedLabel = 'unclaimed'
 
   // Domains
-  const authereumDotEthDomain = authereumLabel + '.' + ethLabel
-  const testDotAuthereumDotEthDomain = testLabel + '.' + authereumLabel + '.' + ethLabel
-  const testtwoDotAuthereumDotEthDomain = testtwoLabel + '.' + authereumLabel + '.' + ethLabel
-  const unclaimedDotAuthereumDotEthDomain = unclaimedLabel + '.' + authereumLabel + '.' + ethLabel
+  const authDotEthDomain = authLabel + '.' + ethLabel
+  const testDotauthDotEthDomain = testLabel + '.' + authLabel + '.' + ethLabel
+  const testtwoDotauthDotEthDomain = testtwoLabel + '.' + authLabel + '.' + ethLabel
+  const unclaimedDotauthDotEthDomain = unclaimedLabel + '.' + authLabel + '.' + ethLabel
 
   // Hashes
   const ethHash = web3.utils.soliditySha3(ethLabel)
-  const authereumHash = web3.utils.soliditySha3(authereumLabel)
+  const authHash = web3.utils.soliditySha3(authLabel)
   const reverseHash = web3.utils.soliditySha3(reverseLabel)
   const addrHash = web3.utils.soliditySha3(addrLabel)
   const testHash = web3.utils.soliditySha3(testLabel)
@@ -61,11 +61,11 @@ contract('AuthereumEnsManager', function (accounts) {
 
   // Nodes
   const ethTldNode = namehash.hash(ethLabel)
-  const authereumDotEthNode = namehash.hash(authereumDotEthDomain)
+  const authDotEthNode = namehash.hash(authDotEthDomain)
   const reverseTldNode = namehash.hash(reverseLabel)
-  const testDotAuthereumDotEthNode = namehash.hash(testDotAuthereumDotEthDomain)
-  const testtwoDotAuthereumDotEthNode = namehash.hash(testtwoDotAuthereumDotEthDomain)
-  const unclaimedLabelDotAuthereumDotEthNode = namehash.hash(unclaimedDotAuthereumDotEthDomain)
+  const testDotauthDotEthNode = namehash.hash(testDotauthDotEthDomain)
+  const testtwoDotauthDotEthNode = namehash.hash(testtwoDotauthDotEthDomain)
+  const unclaimedLabelDotauthDotEthNode = namehash.hash(unclaimedDotauthDotEthDomain)
 
   let ensRegistry,
     ensReverseRegistrar,
@@ -110,7 +110,7 @@ contract('AuthereumEnsManager', function (accounts) {
 
     // Set up Authereum ENS Manager defaults
     await utils.setAuthereumENSManagerDefaults(authereumEnsManager, AUTHEREUM_OWNER, authereumProxyFactoryLogicContract.address, constants.AUTHEREUM_PROXY_RUNTIME_CODE_HASH)
-    
+
     // Create default proxies
     label = testLabel
     expectedSalt = constants.SALT
@@ -135,7 +135,7 @@ contract('AuthereumEnsManager', function (accounts) {
   beforeEach(async() => {
     snapshotId = await timeUtils.takeSnapshot();
   });
- 
+
   afterEach(async() => {
     await timeUtils.revertSnapshot(snapshotId.result);
   });
@@ -146,20 +146,20 @@ contract('AuthereumEnsManager', function (accounts) {
 
   describe('Sanity Checks', () => {
     context('Happy Path', async () => {
-      it('Should set the Authereum ENS Manager as the owner of authereum.eth', async () => {
-        const owner = await ensRegistry.owner(authereumDotEthNode);
-        assert.equal(owner, authereumEnsManager.address, 'Authereum ENS manager should be the owner of authereum.eth');
+      it('Should set the Authereum ENS Manager as the owner of auth.eth', async () => {
+        const owner = await ensRegistry.owner(authDotEthNode);
+        assert.equal(owner, authereumEnsManager.address, 'Authereum ENS manager should be the owner of auth.eth');
       });
       it('Should return the Authereum resolver address for a subdomain', async () => {
-        const resolver = await ensRegistry.resolver(testDotAuthereumDotEthNode);
+        const resolver = await ensRegistry.resolver(testDotauthDotEthNode);
         assert.equal(resolver, authereumEnsResolver.address);
       });
-      it('Should return address(0) for the authereumDotEthNode resolver', async () => {
-        const resolver = await authereumEnsResolver.addr(authereumDotEthNode);
+      it('Should return address(0) for the authDotEthNode resolver', async () => {
+        const resolver = await authereumEnsResolver.addr(authDotEthNode);
         assert.equal(resolver, constants.ZERO_ADDRESS);
       });
       it('Should return address(0) for an unclaimed subdomain resolver', async () => {
-        const resolver = await authereumEnsResolver.addr(unclaimedLabelDotAuthereumDotEthNode);
+        const resolver = await authereumEnsResolver.addr(unclaimedLabelDotauthDotEthNode);
         assert.equal(resolver, constants.ZERO_ADDRESS);
       });
     });
@@ -183,15 +183,15 @@ contract('AuthereumEnsManager', function (accounts) {
   describe('changeRootnodeOwner', () => {
     context('Happy Path', async () => {
       it('Should update the owner of the rootNode from the manager address to a new manager address', async () => {
-        const newAuthereumEnsManager = await AuthereumEnsManager.new(authereumDotEthDomain, authereumDotEthNode, ensRegistry.address, authereumEnsResolver.address, { from: AUTHEREUM_OWNER })
-        let rootnodeOwner = await ensRegistry.owner(authereumDotEthNode)
+        const newAuthereumEnsManager = await AuthereumEnsManager.new(authDotEthDomain, authDotEthNode, ensRegistry.address, authereumEnsResolver.address, { from: AUTHEREUM_OWNER })
+        let rootnodeOwner = await ensRegistry.owner(authDotEthNode)
         assert.equal(rootnodeOwner, authereumEnsManager.address)
 
         // Change the rootnode owner
         var { logs } = await authereumEnsManager.changeRootnodeOwner(newAuthereumEnsManager.address, { from: AUTHEREUM_OWNER })
-        rootnodeOwner = await ensRegistry.owner(authereumDotEthNode)
+        rootnodeOwner = await ensRegistry.owner(authDotEthNode)
         assert.equal(rootnodeOwner, newAuthereumEnsManager.address)
-        expectEvent.inLogs(logs, 'RootnodeOwnerChanged', { rootnode: authereumDotEthNode, newOwner: newAuthereumEnsManager.address })
+        expectEvent.inLogs(logs, 'RootnodeOwnerChanged', { rootnode: authDotEthNode, newOwner: newAuthereumEnsManager.address })
       });
     });
     context('Non-Happy Path', async () => {
@@ -207,15 +207,15 @@ contract('AuthereumEnsManager', function (accounts) {
     context('Happy Path', async () => {
       it('Should update the resolver of the rootNode from the manager address to a new resolver', async () => {
         let newAuthereumEnsResolver = await AuthereumEnsResolver.new( ensRegistry.address, timelockContractAddress, { from: AUTHEREUM_OWNER })
-        let rootnodeResolver = await ensRegistry.resolver(authereumDotEthNode)
+        let rootnodeResolver = await ensRegistry.resolver(authDotEthNode)
         assert.equal(rootnodeResolver, constants.ZERO_ADDRESS)
 
         // Change the rootnode resolver
         var { logs } = await authereumEnsManager.changeRootnodeResolver(newAuthereumEnsResolver.address, { from: AUTHEREUM_OWNER })
 
-        rootnodeResolver = await ensRegistry.resolver(authereumDotEthNode)
+        rootnodeResolver = await ensRegistry.resolver(authDotEthNode)
         assert.equal(rootnodeResolver, newAuthereumEnsResolver.address)
-        expectEvent.inLogs(logs, 'RootnodeResolverChanged', { rootnode: authereumDotEthNode, newResolver: newAuthereumEnsResolver.address })
+        expectEvent.inLogs(logs, 'RootnodeResolverChanged', { rootnode: authDotEthNode, newResolver: newAuthereumEnsResolver.address })
       });
     });
     context('Non-Happy Path', async () => {
@@ -230,15 +230,15 @@ contract('AuthereumEnsManager', function (accounts) {
   describe('changeRootnodeTTL', () => {
     context('Happy Path', async () => {
       it('Should update the TTL of the rootNode from the 0 to 1', async () => {
-        let rootnodeTtl = await ensRegistry.ttl(authereumDotEthNode)
+        let rootnodeTtl = await ensRegistry.ttl(authDotEthNode)
         assert.equal(rootnodeTtl, 0)
 
         // Change the rootnode ttl
         var { logs } = await authereumEnsManager.changeRootnodeTTL(1, { from: AUTHEREUM_OWNER })
 
-        rootnodeTtl = await ensRegistry.ttl(authereumDotEthNode)
+        rootnodeTtl = await ensRegistry.ttl(authDotEthNode)
         assert.equal(rootnodeTtl, '1')
-        expectEvent.inLogs(logs, 'RootnodeTTLChanged', { rootnode: authereumDotEthNode, newTtl: '1'})
+        expectEvent.inLogs(logs, 'RootnodeTTLChanged', { rootnode: authDotEthNode, newTtl: '1'})
       });
     });
     context('Non-Happy Path', async () => {
@@ -250,15 +250,15 @@ contract('AuthereumEnsManager', function (accounts) {
   describe("changeRootnodeText", () => {
     context('Happy Path', async () => {
       it("Should update the text record of the rootNode from the 0 to the default key and value", async () => {
-        let rootnodeText = await authereumEnsResolver.text(authereumDotEthNode, defaultTextKey)
+        let rootnodeText = await authereumEnsResolver.text(authDotEthNode, defaultTextKey)
         assert.equal(rootnodeText, 0)
 
         // Change the rootnode text
         var { logs } = await authereumEnsManager.changeRootnodeText(defaultTextKey, defaultTextValue, { from: AUTHEREUM_OWNER })
 
-        rootnodeText = await authereumEnsResolver.text(authereumDotEthNode, defaultTextKey)
+        rootnodeText = await authereumEnsResolver.text(authDotEthNode, defaultTextKey)
         assert.equal(rootnodeText, defaultTextValue)
-        expectEvent.inLogs(logs, 'RootnodeTextChanged', { node: authereumDotEthNode, indexedKey: defaultTextKeyIndexed, key: defaultTextKey, value: defaultTextValue })
+        expectEvent.inLogs(logs, 'RootnodeTextChanged', { node: authDotEthNode, indexedKey: defaultTextKeyIndexed, key: defaultTextKey, value: defaultTextValue })
       });
     });
     context('Non-Happy Path', async () => {
@@ -270,15 +270,15 @@ contract('AuthereumEnsManager', function (accounts) {
   describe("changeRootnodeContenthash", () => {
     context('Happy Path', async () => {
       it("Should update the contenthash of the rootNode from the null to the default contenthash", async () => {
-        let letRootnodeContenthash = await authereumEnsResolver.contenthash(authereumDotEthNode)
+        let letRootnodeContenthash = await authereumEnsResolver.contenthash(authDotEthNode)
         assert.equal(letRootnodeContenthash, null)
 
         // Change the rootnode contenthash
         var { logs } = await authereumEnsManager.changeRootnodeContenthash(defaultContenthashBytes, { from: AUTHEREUM_OWNER })
 
-        letRootnodeContenthash = await authereumEnsResolver.contenthash(authereumDotEthNode)
+        letRootnodeContenthash = await authereumEnsResolver.contenthash(authDotEthNode)
         assert.equal(letRootnodeContenthash, defaultContenthashHex)
-        expectEvent.inLogs(logs, 'RootnodeContenthashChanged', { node: authereumDotEthNode, hash: defaultContenthashHex })
+        expectEvent.inLogs(logs, 'RootnodeContenthashChanged', { node: authDotEthNode, hash: defaultContenthashHex })
       });
     });
     context('Non-Happy Path', async () => {
@@ -329,33 +329,33 @@ contract('AuthereumEnsManager', function (accounts) {
   });
   describe('Register', () => {
     context('Happy Path', async () => {
-      it('Should let a user register test.authereum.eth', async () => {
+      it('Should let a user register test.auth.eth', async () => {
         // Check subdomain owner
-        const owner = await ensRegistry.owner(testDotAuthereumDotEthNode);
+        const owner = await ensRegistry.owner(testDotauthDotEthNode);
         const proxyCodeAndConstructorHash = await utils.calculateProxyBytecodeAndConstructorHash(authereumAccountLogicContract.address)
         const create2Address = utils.buildCreate2Address(proxyFactoryAddress, saltHash, proxyCodeAndConstructorHash)
-        assert.equal(owner, create2Address, 'create2Address should be the owner of test.authereum.eth');
+        assert.equal(owner, create2Address, 'create2Address should be the owner of test.auth.eth');
 
         // Check Resolver
-        const resolver = await ensRegistry.resolver(testDotAuthereumDotEthNode)
+        const resolver = await ensRegistry.resolver(testDotauthDotEthNode)
         assert.equal(resolver, authereumEnsResolver.address, 'Resolver address should be the Authereun ENS Resolver address')
 
         // Check addr
-        const addr = await authereumEnsResolver.addr(testDotAuthereumDotEthNode)
+        const addr = await authereumEnsResolver.addr(testDotauthDotEthNode)
         assert.equal(addr, create2Address, 'The Authereum Resolver addr was not set correctly')
 
         // Check name
-        const reverseTestDotAuthereumDotEthNode = await utils.getReverseNode(create2Address)
-        const name = await authereumEnsResolver.name(reverseTestDotAuthereumDotEthNode)
-        assert.equal(name, testDotAuthereumDotEthDomain, 'The test.authereum.eth name was not set correcly')
+        const reverseTestDotauthDotEthNode = await utils.getReverseNode(create2Address)
+        const name = await authereumEnsResolver.name(reverseTestDotauthDotEthNode)
+        assert.equal(name, testDotauthDotEthDomain, 'The test.auth.eth name was not set correcly')
       });
-      it('Should let a user register test.authereum.eth and another user to register testtwo.authereum.eth', async () => {
+      it('Should let a user register test.auth.eth and another user to register testtwo.auth.eth', async () => {
         // First user
         let proxyCodeAndConstructorHash = await utils.calculateProxyBytecodeAndConstructorHash(authereumAccountLogicContract.address)
         let create2Address = utils.buildCreate2Address(proxyFactoryAddress, saltHash, proxyCodeAndConstructorHash)
-        let owner = await ensRegistry.owner(testDotAuthereumDotEthNode);
-        assert.equal(owner, create2Address, 'create2Address should be the owner of test.authereum.eth');
-        
+        let owner = await ensRegistry.owner(testDotauthDotEthNode);
+        assert.equal(owner, create2Address, 'create2Address should be the owner of test.auth.eth');
+
         // Second user
         const _expectedSalt = constants.SALT + 10
         const _saltHash = utils.getSaltHash(_expectedSalt, accounts[0])
@@ -366,16 +366,16 @@ contract('AuthereumEnsManager', function (accounts) {
           AUTH_KEYS[0], _label, authereumAccountLogicContract.address
         )
 
-        owner = await ensRegistry.owner(testtwoDotAuthereumDotEthNode);
-        assert.equal(owner, create2Address, 'create2Address should be the owner of testtwo.authereum.eth');
+        owner = await ensRegistry.owner(testtwoDotauthDotEthNode);
+        assert.equal(owner, create2Address, 'create2Address should be the owner of testtwo.auth.eth');
       });
       // NOTE: This identical name will be normalized and blocked on the frontend
-      it('Should let a user register test.authereum.eth and another user register Test.authereum.eth, but ownership will not change because namehash normalizes the names to be the same case', async () => {
+      it('Should let a user register test.auth.eth and another user register Test.auth.eth, but ownership will not change because namehash normalizes the names to be the same case', async () => {
         // First user
         const proxyCodeAndConstructorHash = await utils.calculateProxyBytecodeAndConstructorHash(authereumAccountLogicContract.address)
         const create2Address = utils.buildCreate2Address(proxyFactoryAddress, saltHash, proxyCodeAndConstructorHash)
-        let owner = await ensRegistry.owner(testDotAuthereumDotEthNode);
-        assert.equal(owner, create2Address, 'create2Address should be the owner of test.authereum.eth');
+        let owner = await ensRegistry.owner(testDotauthDotEthNode);
+        assert.equal(owner, create2Address, 'create2Address should be the owner of test.auth.eth');
 
         // Second user
         const _expectedSalt = constants.SALT + 10
@@ -385,8 +385,8 @@ contract('AuthereumEnsManager', function (accounts) {
           AUTH_KEYS[0], _label, authereumAccountLogicContract.address
         )
 
-        owner = await ensRegistry.owner(namehash.hash('Test.authereum.eth'));
-        assert.equal(owner, create2Address, 'create2Address should be the owner of Test.authereum.eth');
+        owner = await ensRegistry.owner(namehash.hash('Test.auth.eth'));
+        assert.equal(owner, create2Address, 'create2Address should be the owner of Test.auth.eth');
       });
     });
     context('Non-Happy Path', async () => {
@@ -427,9 +427,9 @@ contract('AuthereumEnsManager', function (accounts) {
         await authereumEnsManager.changeRootnodeTTL(1, { from: AUTHEREUM_OWNER })
 
         // Get values for original manager
-        let rootnodeOwner = await ensRegistry.owner(authereumDotEthNode)
-        let rootnodeResolver = await ensRegistry.resolver(authereumDotEthNode)
-        let rootnodeTtl = await ensRegistry.ttl(authereumDotEthNode)
+        let rootnodeOwner = await ensRegistry.owner(authDotEthNode)
+        let rootnodeResolver = await ensRegistry.resolver(authDotEthNode)
+        let rootnodeTtl = await ensRegistry.ttl(authDotEthNode)
 
         // Confirm original state
         assert.equal(rootnodeOwner, authereumEnsManager.address)
@@ -437,9 +437,9 @@ contract('AuthereumEnsManager', function (accounts) {
         assert.equal(rootnodeTtl, '1')
 
         // Update manager
-        let newAuthereumEnsManager = await AuthereumEnsManager.new(authereumDotEthDomain, authereumDotEthNode, ensRegistry.address, authereumEnsResolver.address, { from: AUTHEREUM_OWNER })
+        let newAuthereumEnsManager = await AuthereumEnsManager.new(authDotEthDomain, authDotEthNode, ensRegistry.address, authereumEnsResolver.address, { from: AUTHEREUM_OWNER })
         await authereumEnsManager.changeRootnodeOwner(newAuthereumEnsManager.address, { from: AUTHEREUM_OWNER })
-        rootnodeOwner = await ensRegistry.owner(authereumDotEthNode)
+        rootnodeOwner = await ensRegistry.owner(authDotEthNode)
 
         // Confirm state after owner switch
         assert.equal(rootnodeOwner, newAuthereumEnsManager.address)
@@ -452,21 +452,21 @@ contract('AuthereumEnsManager', function (accounts) {
         const create2Address = utils.buildCreate2Address(proxyFactoryAddress, saltHash, proxyCodeAndConstructorHash)
 
         // Check subdomain owner
-        let owner = await ensRegistry.owner(testDotAuthereumDotEthNode);
-        assert.equal(owner, create2Address, 'create2Address should be the owner of test.authereum.eth');
+        let owner = await ensRegistry.owner(testDotauthDotEthNode);
+        assert.equal(owner, create2Address, 'create2Address should be the owner of test.auth.eth');
 
         // Check Resolver
-        let resolver = await ensRegistry.resolver(testDotAuthereumDotEthNode)
+        let resolver = await ensRegistry.resolver(testDotauthDotEthNode)
         assert.equal(resolver, authereumEnsResolver.address, 'Resolver address should be the Authereun ENS Resolver address')
 
         // Check addr
-        let addr = await authereumEnsResolver.addr(testDotAuthereumDotEthNode)
+        let addr = await authereumEnsResolver.addr(testDotauthDotEthNode)
         assert.equal(addr, create2Address, 'The Authereum Resolver addr was not set correctly')
 
         // Check name
-        let reverseTestDotAuthereumDotEthNode = await utils.getReverseNode(create2Address)
-        let name = await authereumEnsResolver.name(reverseTestDotAuthereumDotEthNode)
-        assert.equal(name, testDotAuthereumDotEthDomain, 'The test.authereum.eth name was not set correcly')
+        let reverseTestDotauthDotEthNode = await utils.getReverseNode(create2Address)
+        let name = await authereumEnsResolver.name(reverseTestDotauthDotEthNode)
+        assert.equal(name, testDotauthDotEthDomain, 'The test.auth.eth name was not set correcly')
 
         // Create new resolver
         const newAuthereumEnsResolver = await AuthereumEnsResolver.new(ensRegistry.address, timelockContractAddress, { from: AUTHEREUM_OWNER })
@@ -476,9 +476,9 @@ contract('AuthereumEnsManager', function (accounts) {
         await authereumEnsManager.changeRootnodeTTL(1, { from: AUTHEREUM_OWNER })
 
         // Get values for original manager
-        let rootnodeOwner = await ensRegistry.owner(authereumDotEthNode)
-        let rootnodeResolver = await ensRegistry.resolver(authereumDotEthNode)
-        let rootnodeTtl = await ensRegistry.ttl(authereumDotEthNode)
+        let rootnodeOwner = await ensRegistry.owner(authDotEthNode)
+        let rootnodeResolver = await ensRegistry.resolver(authDotEthNode)
+        let rootnodeTtl = await ensRegistry.ttl(authDotEthNode)
 
         // Confirm original state
         assert.equal(rootnodeOwner, authereumEnsManager.address)
@@ -486,9 +486,9 @@ contract('AuthereumEnsManager', function (accounts) {
         assert.equal(rootnodeTtl, '1')
 
         // Update manager
-        const newAuthereumEnsManager = await AuthereumEnsManager.new(authereumDotEthDomain, authereumDotEthNode, ensRegistry.address, authereumEnsResolver.address, { from: AUTHEREUM_OWNER })
+        const newAuthereumEnsManager = await AuthereumEnsManager.new(authDotEthDomain, authDotEthNode, ensRegistry.address, authereumEnsResolver.address, { from: AUTHEREUM_OWNER })
         await authereumEnsManager.changeRootnodeOwner(newAuthereumEnsManager.address, { from: AUTHEREUM_OWNER })
-        rootnodeOwner = await ensRegistry.owner(authereumDotEthNode)
+        rootnodeOwner = await ensRegistry.owner(authDotEthNode)
 
         // Confirm state after owner switch
         assert.equal(rootnodeOwner, newAuthereumEnsManager.address)
@@ -497,21 +497,21 @@ contract('AuthereumEnsManager', function (accounts) {
 
         // Check user attributes
         // Check subdomain owner
-        owner = await ensRegistry.owner(testDotAuthereumDotEthNode);
-        assert.equal(owner, create2Address, 'create2Address should be the owner of test.authereum.eth');
+        owner = await ensRegistry.owner(testDotauthDotEthNode);
+        assert.equal(owner, create2Address, 'create2Address should be the owner of test.auth.eth');
 
         // Check Resolver
-        resolver = await ensRegistry.resolver(testDotAuthereumDotEthNode)
+        resolver = await ensRegistry.resolver(testDotauthDotEthNode)
         assert.equal(resolver, authereumEnsResolver.address, 'Resolver address should be the Authereun ENS Resolver address')
 
         // Check addr
-        addr = await authereumEnsResolver.addr(testDotAuthereumDotEthNode)
+        addr = await authereumEnsResolver.addr(testDotauthDotEthNode)
         assert.equal(addr, create2Address, 'The Authereum Resolver addr was not set correctly')
 
         // Check name
-        reverseTestDotAuthereumDotEthNode = await utils.getReverseNode(create2Address)
-        name = await authereumEnsResolver.name(reverseTestDotAuthereumDotEthNode)
-        assert.equal(name, testDotAuthereumDotEthDomain, 'The test.authereum.eth name was not set correcly')
+        reverseTestDotauthDotEthNode = await utils.getReverseNode(create2Address)
+        name = await authereumEnsResolver.name(reverseTestDotauthDotEthNode)
+        assert.equal(name, testDotauthDotEthDomain, 'The test.auth.eth name was not set correcly')
       });
     });
   });

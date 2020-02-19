@@ -23,7 +23,9 @@ module.exports = {
     '2019111500',
     '2019122000',
     '2019122100',
-    '2020010900'
+    '2020010900',
+    '2020020200',
+    '2020021700'
   ],
   AUTHEREUM_PROXY_CREATION_CODE: authereumProxyAbi.bytecode,
   AUTHEREUM_PROXY_CREATION_CODE_HASH: web3.utils.soliditySha3(authereumProxyAbi.bytecode),
@@ -58,6 +60,8 @@ module.exports = {
    */
 
   DEFAULT_TOKEN_SUPPLY: 10,
+  DEFAULT_TOKEN_SYMBOL: 'AUTH',
+  DEFAULT_TOKEN_NAME: 'AuthereumToken',
   DEFAULT_TOKEN_DECIMALS: 18,
   DEFAULT_TOKEN_RATE: 150,
 
@@ -123,6 +127,7 @@ module.exports = {
     BT_WILL_FAIL: 'BT: Will fail',
 
     // Upgradeability
+    APF_EMPTY_INIT: 'APF: Empty initialization data',
     APF_UNSUCCESSFUL_INIT: 'APF: Unsuccessful account initialization',
 
     // General

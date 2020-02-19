@@ -71,7 +71,7 @@ contract('BaseAccount', function (accounts) {
     const { authereumEnsManager } = await utils.setENSDefaults(AUTHEREUM_OWNER)
 
     // Message signature
-    MSG_SIG = await utils.getexecuteMultipleAuthKeyMetaTransactionsSig('2019111500')
+    MSG_SIG = await utils.getexecuteMultipleAuthKeyMetaTransactionsSig('2020021700')
 
     // Create Logic Contracts
     authereumAccountLogicContract = await ArtifactAuthereumAccount.new()
@@ -81,7 +81,7 @@ contract('BaseAccount', function (accounts) {
 
     // Set up Authereum ENS Manager defaults
     await utils.setAuthereumENSManagerDefaults(authereumEnsManager, AUTHEREUM_OWNER, authereumProxyFactoryLogicContract.address, constants.AUTHEREUM_PROXY_RUNTIME_CODE_HASH)
-    
+
     // Create default proxies
     label = constants.DEFAULT_LABEL
     expectedSalt = constants.SALT
@@ -99,7 +99,7 @@ contract('BaseAccount', function (accounts) {
 
     // // Send relayer ETH to use as a transaction fee
     // await authereumProxyAccount.sendTransaction({ value:constants.TWO_ETHER, from: AUTH_KEYS[0] })
-  
+
     // Default transaction data
     nonce = await authereumProxyAccount.nonce()
     nonce = nonce.toNumber()
@@ -137,7 +137,7 @@ contract('BaseAccount', function (accounts) {
   beforeEach(async() => {
     snapshotId = await timeUtils.takeSnapshot();
   });
- 
+
   afterEach(async() => {
     await timeUtils.revertSnapshot(snapshotId.result);
   });
@@ -297,6 +297,55 @@ contract('BaseAccount', function (accounts) {
       })
       it('Should not allow a random address to add an auth key', async () => {
         await expectRevert(authereumProxyAccount.addAuthKey(AUTH_KEYS[0], { from: accounts[8] }), constants.REVERT_MSG.BA_REQUIRE_AUTH_KEY_OR_SELF)
+      })
+      it('Should not allow an arbitrary address to add an authKey (directly)', async () => {
+        await expectRevert(authereumProxyAccount.addAuthKey(AUTH_KEYS[1], { from: AUTH_KEYS[1] }), constants.REVERT_MSG.BA_REQUIRE_AUTH_KEY_OR_SELF)
+      })
+      it('Should not allow an arbitrary address to add an authKey through executeMultipleAuthKeyMetaTransactions', async () => {
+        // Confirm that auth key is not yet added
+        let _authKey = await authereumProxyAccount.authKeys(AUTH_KEYS[1])
+        assert.equal(_authKey, false)
+
+        // Set up transaction to add an auth key
+        const _destination = authereumProxyAccount.address
+        const _data = await web3.eth.abi.encodeFunctionCall({
+          name: 'addAuthKey',
+          type: 'function',
+          inputs: [{
+              type: 'address',
+              name: '_authKey'
+          }]
+          }, [accounts[9]])
+
+        // Convert to transactions array
+        const _encodedParameters = await utils.encodeTransactionParams(_destination, value, gasLimit, _data)
+        const _transactions = [_encodedParameters]
+
+        // Get default signedMessageHash and signedLoginKey
+        // NOTE: The signing is done here manually (as oppsoed to calling utils.getAuthKeySignedMessageHash()) in
+        // order to sign with the malicious signer
+        let encodedParams = await web3.eth.abi.encodeParameters(
+          ['address', 'bytes4', 'uint256', 'uint256', 'bytes[]', 'uint256', 'uint256', 'address', 'uint256'],
+          [
+            authereumProxyAccount.address,
+            MSG_SIG,
+            constants.CHAIN_ID,
+            nonce,
+            _transactions,
+            gasPrice,
+            gasOverhead,
+            feeTokenAddress,
+            feeTokenRate
+          ]
+        )
+        let unsignedMessageHash = await web3.utils.soliditySha3(encodedParams)
+        const MALICIOUS_PRIV_KEY = '0xb0057716d5917badaf911b193b12b910811c1497b5bada8d7711f758981c3773'
+        let sigedMsg = web3.eth.accounts.sign(unsignedMessageHash, MALICIOUS_PRIV_KEY)
+        const _transactionMessageHashSignature = sigedMsg.signature
+
+        await expectRevert(authereumProxyAccount.executeMultipleAuthKeyMetaTransactions(
+          _transactions, gasPrice, gasOverhead, feeTokenAddress, feeTokenRate, _transactionMessageHashSignature, { from: RELAYER, gasPrice: gasPrice }
+        ), constants.REVERT_MSG.AKMTA_AUTH_KEY_INVALID)
       })
       it('Should not allow a loginKey to add an authKey through executeMultipleLoginKeyMetaTransactions', async () => {
         // Confirm that auth key is not yet added
@@ -506,6 +555,54 @@ contract('BaseAccount', function (accounts) {
       it('Should not allow a random address to remove an auth key', async () => {
         await authereumProxyAccount.addAuthKey(AUTH_KEYS[1], { from: AUTH_KEYS[0] })
         await expectRevert(authereumProxyAccount.removeAuthKey(AUTH_KEYS[1], { from: accounts[8] }), constants.REVERT_MSG.BA_REQUIRE_AUTH_KEY_OR_SELF)
+      })
+      it('Should not allow an arbitrary address to remove an authKey through executeMultipleAuthKeyMetaTransactions', async () => {
+        await authereumProxyAccount.addAuthKey(AUTH_KEYS[1], { from: AUTH_KEYS[0] })
+
+        // Confirm that auth key is already added
+        let _authKey = await authereumProxyAccount.authKeys(AUTH_KEYS[1])
+        assert.equal(_authKey, true)
+
+        // Set up transaction to add an auth key
+        const _destination = authereumProxyAccount.address
+        const _data = await web3.eth.abi.encodeFunctionCall({
+          name: 'removeAuthKey',
+          type: 'function',
+          inputs: [{
+              type: 'address',
+              name: '_authKey'
+          }]
+          }, [AUTH_KEYS[1]])
+
+        // Convert to transactions array
+        const _encodedParameters = await utils.encodeTransactionParams(_destination, value, gasLimit, _data)
+        const _transactions = [_encodedParameters]
+
+        // Get default signedMessageHash and signedLoginKey
+        // NOTE: The signing is done here manually (as oppsoed to calling utils.getAuthKeySignedMessageHash()) in
+        // order to sign with the malicious signer
+        let encodedParams = await web3.eth.abi.encodeParameters(
+          ['address', 'bytes4', 'uint256', 'uint256', 'bytes[]', 'uint256', 'uint256', 'address', 'uint256'],
+          [
+            authereumProxyAccount.address,
+            MSG_SIG,
+            constants.CHAIN_ID,
+            nonce,
+            _transactions,
+            gasPrice,
+            gasOverhead,
+            feeTokenAddress,
+            feeTokenRate
+          ]
+        )
+        let unsignedMessageHash = await web3.utils.soliditySha3(encodedParams)
+        const MALICIOUS_PRIV_KEY = '0xb0057716d5917badaf911b193b12b910811c1497b5bada8d7711f758981c3773'
+        let sigedMsg = web3.eth.accounts.sign(unsignedMessageHash, MALICIOUS_PRIV_KEY)
+        const _transactionMessageHashSignature = sigedMsg.signature
+
+        await expectRevert(authereumProxyAccount.executeMultipleLoginKeyMetaTransactions(
+          _transactions, gasPrice, gasOverhead, loginKeyRestrictionsData, feeTokenAddress, feeTokenRate, _transactionMessageHashSignature, loginKeyAttestationSignature, { from: RELAYER, gasPrice: gasPrice }
+        ), constants.REVERT_MSG.LKMTA_LOGIN_KEY_NOT_ABLE_TO_CALL_SELF)
       })
       it('Should not allow a loginKey to remove an authKey through executeMultipleLoginKeyMetaTransactions', async () => {
         await authereumProxyAccount.addAuthKey(AUTH_KEYS[1], { from: AUTH_KEYS[0] })
