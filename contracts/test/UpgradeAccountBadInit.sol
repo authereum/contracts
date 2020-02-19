@@ -5,7 +5,7 @@ import "../account/AuthereumAccount.sol";
 
 /**
  * @title UpgradeAccountBadInit
- * @author Authereum, Inc.
+ * @author Authereum Labs, Inc.
  * @dev A contract used to test failing initializations.
  */
 

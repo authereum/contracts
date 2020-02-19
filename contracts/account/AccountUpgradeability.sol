@@ -5,7 +5,7 @@ import './BaseAccount.sol';
 
 /**
  * @title AccountUpgradeability
- * @author Authereum, Inc.
+ * @author Authereum Labs, Inc.
  * @dev The upgradeability logic for an Authereum account.
  */
 

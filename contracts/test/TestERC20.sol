@@ -1,4 +1,4 @@
-  
+
 pragma solidity ^0.5.16;
 
 /**
@@ -469,11 +469,23 @@ contract ERC20 is IERC20 {
 
 contract TestERC20 is ERC20 {
 
-    string constant public symbol = "AUTH";
-    string constant public name = "AuthereumToken";
+    // string constant public symbol = "AUTH";
+    // string constant public name = "AuthereumToken";
+    string public symbol;
+    string public name;
     uint8 public decimals;
 
-    constructor (address[] memory _initialAccounts, uint256 _supply, uint8 _decimals) public {
+    constructor (
+      address[] memory _initialAccounts,
+      uint256 _supply,
+      string memory _symbol,
+      string memory _name,
+      uint8 _decimals
+    )
+      public
+    {
+        symbol = _symbol;
+        name = _name;
         decimals = _decimals;
         for(uint256 i = 0; i < _initialAccounts.length; i++) {
             _mint(_initialAccounts[i], _supply * 10**uint256(_decimals));

@@ -5,7 +5,7 @@ import "./state/AuthereumEnsResolverState.sol";
 
 /**
  * @title AuthereumEnsResolver
-  * @author Authereum, Inc.
+  * @author Authereum Labs, Inc.
  * @dev Authereum implementation of a Resolver.
  */
 

@@ -10,7 +10,7 @@ import "../interfaces/IAuthereumAccount.sol";
 
 /**
  * @title AuthereumAccount
- * @author Authereum, Inc.
+ * @author Authereum Labs, Inc.
  * @dev Top-level contract used when creating an Authereum account.
  * @dev This contract is meant to only hold the version. All other logic is inherited.
  */

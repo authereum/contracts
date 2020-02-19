@@ -5,7 +5,7 @@ import "../account/AuthereumAccount.sol";
 
 /**
  * @title UpgradeAccount
- * @author Authereum, Inc.
+ * @author Authereum Labs, Inc.
  * @dev A contract used to test upgrades. This contract does not have an init function.
  */
 

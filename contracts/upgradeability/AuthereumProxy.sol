@@ -3,7 +3,7 @@ pragma experimental ABIEncoderV2;
 
 /**
  * @title AuthereumProxy
- * @author Authereum, Inc.
+ * @author Authereum Labs, Inc.
  * @dev The Authereum Proxy.
  */
 

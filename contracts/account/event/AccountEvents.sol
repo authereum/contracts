@@ -3,7 +3,7 @@ pragma solidity 0.5.16;
 
 /**
  * @title AccountEvents
- * @author Authereum, Inc.
+ * @author Authereum Labs, Inc.
  * @dev This contract holds the events used by the Authereum contracts.
  * @dev This abstraction exists in order to retain the order to give initialization functions
  * @dev access to events.

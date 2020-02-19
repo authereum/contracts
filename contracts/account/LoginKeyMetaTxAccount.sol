@@ -5,7 +5,7 @@ import "./BaseMetaTxAccount.sol";
 
 /**
  * @title LoginKeyMetaTxAccount
- * @author Authereum, Inc.
+ * @author Authereum Labs, Inc.
  * @dev Contract used by login keys to send transactions. Login key firwall checks
  * @dev are performed in this contract as well.
  */

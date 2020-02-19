@@ -9,7 +9,7 @@ contract AuthereumEnsManager {
 }
 /**
  * @title AuthereumProxyFactory
- * @author Authereum, Inc.
+ * @author Authereum Labs, Inc.
  * @dev A factory that creates Authereum Proxies.
  */
 

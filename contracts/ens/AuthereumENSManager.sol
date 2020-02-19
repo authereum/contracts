@@ -6,7 +6,7 @@ import "../utils/strings.sol";
 
 /**
  * @title AuthereumEnsManager
- * @author Authereum, Inc.
+ * @author Authereum Labs, Inc.
  * @dev Used to manage all subdomains.
  * @dev This is also known as the Authereum registrar.
  * @dev The public ENS registry is used. The resolver is custom.
@@ -15,7 +15,7 @@ import "../utils/strings.sol";
 contract AuthereumEnsManager is Owned {
     using strings for *;
 
-    string constant public authereumEnsManagerVersion = "2019111500";
+    string constant public authereumEnsManagerVersion = "2020020200";
 
     // namehash('addr.reverse')
     bytes32 constant public ADDR_REVERSE_NODE = 0x91d1777781884d03a6757a803996e38de2a42967fb37eeaca72729271025a9e2;

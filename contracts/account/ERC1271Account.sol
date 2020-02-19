@@ -5,7 +5,7 @@ import "../interfaces/IERC1271.sol";
 
 /**
  * @title ERC1271Account
- * @author Authereum, Inc.
+ * @author Authereum Labs, Inc.
  * @dev Implements isValidSignature for ERC1271 compatibility
  */
 

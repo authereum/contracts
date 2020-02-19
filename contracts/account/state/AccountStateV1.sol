@@ -2,7 +2,7 @@ pragma solidity 0.5.16;
 
 /**
  * @title AccountStateV1
- * @author Authereum, Inc.
+ * @author Authereum Labs, Inc.
  * @dev This contract holds the state variables used by the account contracts.
  * @dev This abstraction exists in order to retain the order of the state variables.
  */

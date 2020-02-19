@@ -5,7 +5,7 @@ import "../account/BaseAccount.sol";
 
 /**
  * @title TransactionLimit
- * @author Authereum, Inc.
+ * @author Authereum Labs, Inc.
  * @dev Used to limit login key's transaction limits. This contract handles all
  * @dev functionality related to daily limits for login keys.
  */

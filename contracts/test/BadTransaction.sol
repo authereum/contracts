@@ -1,8 +1,8 @@
 pragma solidity 0.5.16;
 
 /**
- * @title Authereum Proxy Factory
- * @author Authereum, Inc.
+ * @title Authereum Bad Transaction
+ * @author Authereum Labs, Inc.
  * @dev A contract that has a transaction that will throw.
  */
 

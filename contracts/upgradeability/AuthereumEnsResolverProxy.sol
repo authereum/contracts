@@ -5,7 +5,7 @@ import "../base/Owned.sol";
 
 /**
  * @title AuthereumEnsResolverProxy
- * @author Authereum, Inc.
+ * @author Authereum Labs, Inc.
  * @dev The Authereum ENS Resolver Proxy.
  */
 

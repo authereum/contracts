@@ -4,7 +4,7 @@ import "./Owned.sol";
 
 /**
  * @title Managed
- * @author Authereum, Inc.
+ * @author Authereum Labs, Inc.
  * @dev Basic contract that defines a set of managers. Only the owner can add/remove managers.
  */
 

@@ -5,7 +5,7 @@ import "../event/AccountEvents.sol";
 
 /**
  * @title AccountInitializeV1
- * @author Authereum, Inc.
+ * @author Authereum Labs, Inc.
  * @dev This contract holds the initialize function used by the account contracts.
  * @dev This abstraction exists in order to retain the order of the initialization functions.
  */

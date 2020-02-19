@@ -4,7 +4,7 @@ import "../base/Owned.sol";
 
 /**
  * @title Timelock
- * @author Authereum, Inc.
+ * @author Authereum Labs, Inc.
  * @dev Used to make changes to contracts with a known time lock.
  * @dev The goal of this contract is to make the public aware of contract changes made
  * @dev by the contract owners. This will keep the owners honest and will allow the

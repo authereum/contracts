@@ -4,7 +4,7 @@ import "./AccountInitializeV1.sol";
 
 /**
  * @title AccountInitialize
- * @author Authereum, Inc.
+ * @author Authereum Labs, Inc.
  * @dev This contract holds the intialize functions used by the account contracts.
  * @dev This exists as the main contract to hold these functions. This contract is inherited
  * @dev by AuthereumAccount.sol, which will not care about initialization functions as long as it inherits

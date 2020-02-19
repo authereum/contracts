@@ -5,7 +5,7 @@ import "./BaseMetaTxAccount.sol";
 
 /**
  * @title AuthKeyMetaTxAccount
- * @author Authereum, Inc.
+ * @author Authereum Labs, Inc.
  * @dev Contract used by auth keys to send transactions.
  */
 

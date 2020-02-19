@@ -5,7 +5,7 @@ import "./BaseAccount.sol";
 
 /**
  * @title BaseMetaTxAccount
- * @author Authereum, Inc.
+ * @author Authereum Labs, Inc.
  * @dev Contract that lays the foundations for meta transactions
  * @dev are performed in this contract as well.
  */

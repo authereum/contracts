@@ -4,7 +4,7 @@ import "./AuthereumEnsResolverStateV1.sol";
 
 /**
  * @title AuthereumEnsResolverState
- * @author Authereum, Inc.
+ * @author Authereum Labs, Inc.
  * @dev This contract holds the state variables used by the Authereum ENS Resolver.
  * @dev This exists as the main contract to hold state. This contract is inherited
  * @dev by AuthereumEnsResolver.sol, which will not care about state as long as it inherits

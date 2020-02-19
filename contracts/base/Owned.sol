@@ -2,7 +2,7 @@ pragma solidity ^0.5.16;
 
 /**
  * @title Owned
- * @author Authereum, Inc.
+ * @author Authereum Labs, Inc.
  * @dev Basic contract to define an owner.
  */
 

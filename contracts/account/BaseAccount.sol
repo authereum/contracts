@@ -11,7 +11,7 @@ import "../libs/BytesLib.sol";
 
 /**
  * @title BaseAccount
- * @author Authereum, Inc.
+ * @author Authereum Labs, Inc.
  * @dev Base account contract. Performs most of the functionality
  * @dev of an Authereum account contract.
  */
