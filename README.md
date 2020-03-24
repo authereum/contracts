@@ -5,6 +5,8 @@
 [![License](http://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/authereum/converter/master/LICENSE)
 [![dependencies Status](https://david-dm.org/authereum/contracts/status.svg)](https://david-dm.org/authereum/contracts)
 
+_Check out the Authereum contracts bug bounty program [here](https://support.authereum.com/hc/en-us/articles/360043760793-Does-Authereum-have-a-bug-bounty-program-)!_
+
 ## Contract Design
 
 The Authereum contracts are necessary pieces of the Authereum ecosystem. Users of the Authereum accounts own a proxy contract that points to an upgradeable logic contract. The contracts are organized in the following directories:
