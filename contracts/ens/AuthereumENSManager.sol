@@ -2,7 +2,7 @@ pragma solidity 0.5.17;
 
 import "./AuthereumEnsResolver.sol";
 import "../base/Owned.sol";
-import "../utils/strings.sol";
+import "../libs/strings.sol";
 
 /**
  * @title AuthereumEnsManager

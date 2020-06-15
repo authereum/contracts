@@ -8,6 +8,7 @@ import "../interfaces/IERC20.sol";
 import "../libs/ECDSA.sol";
 import "../libs/SafeMath.sol";
 import "../libs/BytesLib.sol";
+import "../libs/strings.sol";
 
 /**
  * @title BaseAccount

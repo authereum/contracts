@@ -1,6 +1,6 @@
 pragma solidity 0.5.17;
 
-import '../utils/Address.sol';
+import '../libs/Address.sol';
 import './BaseAccount.sol';
 
 /**
