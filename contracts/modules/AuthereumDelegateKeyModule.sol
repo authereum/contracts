@@ -4,7 +4,6 @@ pragma experimental ABIEncoderV2;
 import "../account/AuthereumAccount.sol";
 import "../libs/BytesLib.sol";
 import "../libs/SafeMath.sol";
-import "../utils/ReentrancyGuard.sol";
 
 /**
  * @title AuthereumDelegateKeyModule
@@ -164,7 +163,6 @@ contract AuthereumDelegateKeyModule {
         bytes calldata _data
     )
         external
-        nonReentrant
         onlyActiveDelegateKey(_authereumAccount)
         returns (bytes[] memory)
     {
