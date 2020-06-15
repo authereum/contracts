@@ -31,9 +31,11 @@ contract AuthereumProxy {
     /// @notice It will return to the external caller whatever the implementation returns.
     function () external payable {
         if (msg.data.length == 0) return;
-        address _implementation = implementation();
 
         assembly {
+            // Load the implementation address from the IMPLEMENTATION_SLOT
+            let impl := sload(IMPLEMENTATION_SLOT)
+
             // Copy msg.data. We take full control of memory in this inline assembly
             // block because it will not return to Solidity code. We overwrite the
             // Solidity scratch pad at memory position 0.
@@ -41,7 +43,7 @@ contract AuthereumProxy {
 
             // Call the implementation.
             // out and outsize are 0 because we don't know the size yet.
-            let result := delegatecall(gas, _implementation, 0, calldatasize, 0, 0)
+            let result := delegatecall(gas, impl, 0, calldatasize, 0, 0)
 
             // Copy the returned data.
             returndatacopy(0, 0, returndatasize)
@@ -50,15 +52,6 @@ contract AuthereumProxy {
             // delegatecall returns 0 on error.
             case 0 { revert(0, returndatasize) }
             default { return(0, returndatasize) }
-        }
-    }
-
-    /// @dev Returns the current implementation.
-    /// @return Address of the current implementation
-    function implementation() public view returns (address impl) {
-        bytes32 slot = IMPLEMENTATION_SLOT;
-        assembly {
-            impl := sload(slot)
         }
     }
 }

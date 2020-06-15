@@ -19,6 +19,16 @@ contract AccountUpgradeability is BaseAccount {
      *  Public functions
      */
 
+    /// @dev Returns the current implementation
+    /// @notice This is meant to be called through the proxy to retrieve it's implementation address
+    /// @return Address of the current implementation
+    function implementation() public view returns (address impl) {
+        bytes32 slot = IMPLEMENTATION_SLOT;
+        assembly {
+            impl := sload(slot)
+        }
+    }
+
     /// @dev Upgrades the proxy to the newest implementation of a contract and 
     /// @dev forwards a function call to it
     /// @notice This is useful to initialize the proxied contract
