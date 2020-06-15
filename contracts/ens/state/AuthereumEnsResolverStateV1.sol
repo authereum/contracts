@@ -6,7 +6,7 @@ import "../../test/EnsReverseRegistrar.sol";
  * @title AuthereumEnsResolverStateV1
  * @author Authereum Labs, Inc.
  * @dev This contract holds the state variables used by the Authereum ENS Resolver.
- * @dev This abscraction exists in order to retain the order of the state variables.
+ * @dev This abstraction exists in order to retain the order of the state variables.
  */
 
 contract AuthereumEnsResolverStateV1 {

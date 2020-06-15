@@ -52,7 +52,7 @@ contract AuthereumLoginKeyValidator is Owned, ILoginKeyTransactionValidator {
     }
 
     /// @dev Called after a transaction is executed to record information about the transaction
-    ///      for validation such as value transfered
+    ///      for validation such as value transferred
     //  @param _transactions The encoded transactions being executed
     //  @param _validationData The encoded data containing the expiration time
     //  @param _relayerAddress The address calling the account contract

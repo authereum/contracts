@@ -82,7 +82,7 @@ contract BaseMetaTxAccount is BaseAccount {
 
     /// @dev Decode and execute a meta transaction
     /// @param _transaction Transaction (to, value, gasLimit, data)
-    /// @return Succcess status and response of the call
+    /// @return Success status and response of the call
     function _decodeAndExecuteTransaction(bytes memory _transaction) internal returns (bytes memory) {
         (address _to, uint256 _value, uint256 _gasLimit, bytes memory _data) = _decodeTransactionData(_transaction);
 

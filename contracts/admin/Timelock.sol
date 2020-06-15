@@ -36,7 +36,7 @@ contract Timelock is Owned {
     }
 
     /// @param _timelock Amount of time that a pending change is locked for
-    /// @param _timelockExpire Amoutn of time AFTER timelock that data is changeable before expiring
+    /// @param _timelockExpire Amount of time AFTER timelock that data is changeable before expiring
     constructor(uint256 _timelock, uint256 _timelockExpire) public {
         timelock = _timelock;
         timelockExpire = _timelockExpire;
@@ -120,7 +120,7 @@ contract Timelock is Owned {
         emit TimelockUpdated(timelock);
     }
 
-    /// @dev Sets a new timelock exipration
+    /// @dev Sets a new timelock expiration
     /// @notice Can only be called by self
     /// @param _timelockExpire New timelock time
     function setTimelockExpire(uint256 _timelockExpire) public onlyThisContract {

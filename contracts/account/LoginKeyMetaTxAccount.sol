@@ -7,7 +7,7 @@ import "../interfaces/ILoginKeyTransactionValidator.sol";
 /**
  * @title LoginKeyMetaTxAccount
  * @author Authereum Labs, Inc.
- * @dev Contract used by login keys to send transactions. Login key firwall checks
+ * @dev Contract used by login keys to send transactions. Login key firewall checks
  * @dev are performed in this contract as well.
  */
 

@@ -53,7 +53,7 @@ contract AuthereumEnsManager is Owned {
     /// @param _rootName The root name (e.g. auth.eth)
     /// @param _rootNode The node of the root name (e.g. namehash(auth.eth))
     /// @param _ensRegistry Public ENS Registry address
-    /// @param _authereumEnsResolver Custom Autheruem ENS Resolver address
+    /// @param _authereumEnsResolver Custom Authereum ENS Resolver address
     constructor(
         string memory _rootName,
         bytes32 _rootNode,
@@ -135,7 +135,7 @@ contract AuthereumEnsManager is Owned {
      */
 
     /// @dev Lets the owner change the address of the Authereum ENS resolver contract
-    /// @param _authereumEnsResolver The address of the Authereun ENS resolver contract
+    /// @param _authereumEnsResolver The address of the Authereum ENS resolver contract
     function changeAuthereumEnsResolver(address _authereumEnsResolver) external onlyOwner {
         require(_authereumEnsResolver != address(0), "AEM: Address must not be null");
         authereumEnsResolver = _authereumEnsResolver;
