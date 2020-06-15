@@ -7,7 +7,10 @@ pragma solidity 0.5.17;
  */
 
 contract AuthereumProxy {
-    string constant public authereumProxyVersion = "2019102500";
+
+    // We do not include a name or a version for this contract as this
+    // is a simple proxy. Including them here would overwrite the declaration
+    // of these variables in the implementation.
 
     /// @dev Storage slot with the address of the current implementation.
     /// @notice This is the keccak-256 hash of "eip1967.proxy.implementation" subtracted 

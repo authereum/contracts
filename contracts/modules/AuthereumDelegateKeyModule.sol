@@ -27,6 +27,9 @@ contract AuthereumDelegateKeyModule {
     using SafeMath for uint256;
     using BytesLib for bytes;
 
+    string constant public name = "Authereum Delegate Key Module";
+    string constant public version = "2020070100";
+
     /**
      * Events
      */

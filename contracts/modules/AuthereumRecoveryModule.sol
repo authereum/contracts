@@ -20,6 +20,9 @@ import "../account/AuthereumAccount.sol";
 contract AuthereumRecoveryModule {
     using SafeMath for uint256;
 
+    string constant public name = "Authereum Recovery Module";
+    string constant public version = "2020070100";
+
     /**
      * Events
      */
@@ -71,9 +74,6 @@ contract AuthereumRecoveryModule {
 
     mapping(address => mapping(address => RecoveryAccount)) public recoveryAccounts;
     mapping(address => mapping(address => RecoveryAttempt)) public recoveryAttempts;
-
-    string constant public name = "Authereum Recovery Module";
-    string constant public authereumRecoveryModuleVersion = "2020033000";
 
     /**
      * Modifiers

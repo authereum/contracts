@@ -14,8 +14,10 @@ contract AuthereumEnsManager {
  */
 
 contract AuthereumProxyFactory is Owned {
+
     string constant public name = "Authereum Proxy Factory";
-    string constant public authereumProxyFactoryVersion = "2019111500";
+    string constant public version = "2020070100";
+
     bytes private initCode;
     address private authereumEnsManagerAddress;
     

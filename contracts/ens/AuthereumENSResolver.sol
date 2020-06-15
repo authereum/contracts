@@ -13,7 +13,7 @@ contract AuthereumEnsResolver is Managed, AuthereumEnsResolverState {
 
     // This contract does not have a `name` variable because that namespace is already
     // used for the function below.
-    string constant public authereumEnsResolverVersion = "2019111500";
+    string constant public version = "2020070100";
 
     bytes4 constant private INTERFACE_META_ID = 0x01ffc9a7;
     bytes4 constant private ADDR_INTERFACE_ID = 0x3b3b57de;

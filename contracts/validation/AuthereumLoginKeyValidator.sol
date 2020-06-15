@@ -13,6 +13,9 @@ import "../interfaces/ILoginKeyTransactionValidator.sol";
 
 contract AuthereumLoginKeyValidator is Owned, ILoginKeyTransactionValidator {
 
+    string constant public name = "Authereum Login Key Validator";
+    string constant public version = "2020070100";
+
     /**
      * Events
      */
@@ -25,9 +28,6 @@ contract AuthereumLoginKeyValidator is Owned, ILoginKeyTransactionValidator {
      */
 
     mapping(address => bool) public relayerIsWhitelisted;
-
-    string constant public name = "Authereum Login Key Validator";
-    string constant public authereumLoginKeyValidatorVersion = "2020033000";
 
     /// @dev Returns true and an empty string if transactions are valid and false and an error
     ///      message if it's invalid.
