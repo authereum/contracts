@@ -7,9 +7,10 @@ const PrivateKeyProvider = require('truffle-privatekey-provider')
 const privateKey = process.env.RELAYER_PRIVATE_KEY || process.env.SENDER_PRIVATE_KEY || process.env.PRIVATE_KEY
 const infuraId = process.env.INFURA_ID
 const rpcUri = process.env.TRUFFLE_RPC_URI || process.env.RPC_URI || process.env.ETH_HTTP_PROVIDER_URI
+const etherscanApiKey = process.env.ETHERSCAN_API_KEY
 
 const createPrivKeyProvider = (networkName) => {
-  const providerUri = `https://${networkName}.rpc.authereum.org`
+  const providerUri = `https://${networkName}.rpc.authereum.com`
   return () => new PrivateKeyProvider(privateKey, providerUri)
 }
 
@@ -59,7 +60,7 @@ module.exports = {
       gas: 5712383,
       gasPrice: 20000000000
     },
-},
+  },
 
   mocha: {
     timeout: 100000
@@ -70,10 +71,27 @@ module.exports = {
       version: '0.5.17',
       docker: false,
       optimizer: {
+        // We are deliberately disabling the optimizer.
+        // https://github.com/gnosis/safe-contracts/pull/167#discussion_r365153500
         enabled: false,
         runs: 200
       },
-      evmVersion: 'constantinople'
+      // NOTE: This should technically be muirGlacier, but that fork is
+      // (a) not supported here and (b) had no changes that would affect
+      // this compilation.
+      evmVersion: 'istanbul'
     }
+  },
+
+  plugins: [
+    'truffle-plugin-verify'
+  ],
+
+  verify: {
+    preamble: "Author: Authereum Labs, Inc."
+  },
+
+  api_keys: {
+    etherscan: etherscanApiKey
   }
 }

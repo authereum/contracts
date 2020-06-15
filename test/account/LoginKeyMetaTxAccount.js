@@ -93,7 +93,8 @@ contract('LoginKeyMetaTxAccount', function (accounts) {
 
     // Create Logic Contracts
     authereumAccountLogicContract = await ArtifactAuthereumAccount.new()
-    authereumProxyFactoryLogicContract = await ArtifactAuthereumProxyFactory.new(authereumAccountLogicContract.address, authereumEnsManager.address)
+    const _proxyInitCode = await utils.calculateProxyBytecodeAndConstructor(authereumAccountLogicContract.address)
+    authereumProxyFactoryLogicContract = await ArtifactAuthereumProxyFactory.new(_proxyInitCode, authereumEnsManager.address)
     authereumProxyAccountUpgradeLogicContract = await ArtifactAuthereumProxyAccountUpgrade.new()
     authereumProxyAccountUpgradeWithInitLogicContract = await ArtifactAuthereumProxyAccountUpgradeWithInit.new()
 
@@ -774,9 +775,6 @@ contract('LoginKeyMetaTxAccount', function (accounts) {
         assert.equal(Number(beforeRelayerBalanceToken), Number(afterRelayerBalanceToken))
       })
       it('Should allow the relayer to send a lower gasLimit than the user sets if the user does not use all of their allotted gas', async () => {
-        const beforeProxyBalance = await balance.current(authereumProxyAccount.address)
-        const beforeRelayerBalance = await balance.current(RELAYER)
-
         const _gasLimit = 2000000
 
         // Confirm that the relayer gasLimit is higher than the user's _gasLimit
@@ -798,16 +796,11 @@ contract('LoginKeyMetaTxAccount', function (accounts) {
           feeTokenRate
         )
 
-        await authereumProxyAccount.executeMultipleLoginKeyMetaTransactions(
+        var { logs } = await authereumProxyAccount.executeMultipleLoginKeyMetaTransactions(
           _transactions, gasPrice, gasOverhead, loginKeyRestrictionsData, feeTokenAddress, feeTokenRate, _transactionMessageHashSignature, loginKeyAttestationSignature, { from: RELAYER, gas: gasLimit}
         )
 
-        const afterProxyBalance = await balance.current(authereumProxyAccount.address)
-        const afterRelayerBalance = await balance.current(RELAYER)
-
-        // The acccount should only lose the value they sent and a fee. The relayer should lose the fee amount.
-        assert.closeTo(Number(beforeProxyBalance) - value, Number(afterProxyBalance), 100000000000000000)
-        assert.closeTo(Number(afterRelayerBalance) - Number(beforeRelayerBalance), 171659999969280, 100000000000000)
+        expectEvent.inLogs(logs, 'CallFailed', { reason: constants.REVERT_MSG.BA_INSUFFICIENT_GAS_TRANSACTION})
       })
       it('Should successfully execute a login key meta transaction sent to an auth key with no data and low gasLimit', async () => {
         await authereumProxyAccount.sendTransaction({ value: constants.THREE_ETHER, from: AUTH_KEYS[0] })
@@ -1404,6 +1397,32 @@ contract('LoginKeyMetaTxAccount', function (accounts) {
             authereumProxyAccount.executeMultipleLoginKeyMetaTransactions(
               _transactions, gasPrice, gasOverhead, loginKeyRestrictionsData, feeTokenAddress, feeTokenRate, _transactionMessageHashSignature, loginKeyAttestationSignature, { from: RELAYER, gasPrice: gasPrice }
           ), constants.REVERT_MSG.GENERAL_REVERT)
+        })
+        it('Should throw because the transaction\'s gasLimit parameter exceeds the top level transaction\'s gasLimit', async () => {
+          const _gasLimit = 5000000
+          const _relayerGasLimit = 4000000
+
+          // Convert to transactions array
+          const _encodedParameters = await utils.encodeTransactionParams(to, value, _gasLimit, data)
+          const _transactions = [_encodedParameters]
+          const _transactionMessageHashSignature = await utils.getLoginKeySignedMessageHash(
+            authereumProxyAccount.address,
+            MSG_SIG,
+            constants.CHAIN_ID,
+            nonce,
+            _transactions,
+            gasPrice,
+            gasOverhead,
+            feeTokenAddress,
+            feeTokenRate
+          )
+
+          // NOTE: This should succeed. Even though the data is not in the correct order, it technically still is a valid transaction
+          var { logs } = await authereumProxyAccount.executeMultipleLoginKeyMetaTransactions(
+            _transactions, gasPrice, gasOverhead, loginKeyRestrictionsData, feeTokenAddress, feeTokenRate, _transactionMessageHashSignature, loginKeyAttestationSignature, { from: RELAYER, gas: _relayerGasLimit, gasPrice: gasPrice }
+          )
+
+          expectEvent.inLogs(logs, 'CallFailed', { reason: constants.REVERT_MSG.BA_INSUFFICIENT_GAS_TRANSACTION })
         })
         it('Should revert due to the fact that the relayer used a different token address than expected', async () => {
           // Create a token for use in fee payments

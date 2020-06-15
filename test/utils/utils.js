@@ -194,11 +194,11 @@ const setAuthereumProxyFactory = async (project) => {
 
 // Inspiration from miguelmota's solidity-create-2-example repo
 // https://github.com/miguelmota/solidity-create2-example/blob/master/test/utils/index.js#L56
-function buildCreate2Address(creatorAddress, saltHex, proxyBytecodeAndConstructorHash) {
+function buildCreate2Address(creatorAddress, saltHash, proxyBytecodeAndConstructorHash) {
   const nonChecksumAddress = `0x${web3.utils.sha3(`0x${[
     'ff',
     creatorAddress,
-    saltHex,
+    saltHash,
     proxyBytecodeAndConstructorHash
   ].map(x => x.replace(/0x/, ''))
   .join('')}`).slice(-40)}`.toLowerCase()
@@ -206,8 +206,10 @@ function buildCreate2Address(creatorAddress, saltHex, proxyBytecodeAndConstructo
   return web3.utils.toChecksumAddress(nonChecksumAddress)
 }
 
-function getSaltHash(salt, address) {
-  return web3.utils.soliditySha3(salt, address)
+function getSaltHash(_salt, _initCode) {
+  const _encodedParams = web3.eth.abi.encodeParameter('bytes[]', _initCode)
+  const _hashedInitCode = web3.utils.soliditySha3(_encodedParams)
+  return web3.utils.soliditySha3(_salt, _hashedInitCode)
 }
 
 /*
@@ -304,7 +306,6 @@ const createProxy = async (
   label,
   logicContractAddress,
 ) => {
-  const saltHash = getSaltHash(salt, txOrigin)
   // NOTE: This data is expected to be the data for the latest AccountInitialize
   // version
   const accountCreationData = await getAuthereumAccountCreationData(authKey)
@@ -312,6 +313,7 @@ const createProxy = async (
   await authereumProxyFactory.createProxy(salt, label, accountCreationData)
 
   // Deploy the proxy
+  const saltHash = getSaltHash(salt, accountCreationData)
   const proxyCreationHash = await calculateProxyBytecodeAndConstructorHash(logicContractAddress)
   return buildCreate2Address(authereumProxyFactory.address, saltHash, proxyCreationHash)
 }
@@ -322,8 +324,8 @@ const calculateProxyBytecodeAndConstructor = async (logicContract) => {
 }
 
 const calculateProxyBytecodeAndConstructorHash = async (logicContract) => {
-  const encodedLogicAddress = await web3.eth.abi.encodeParameter('address', logicContract)
-  return web3.utils.sha3(constants.AUTHEREUM_PROXY_CREATION_CODE + encodedLogicAddress.slice(2))
+  const proxyBytecodeAndConstructor = await calculateProxyBytecodeAndConstructor(logicContract)
+  return web3.utils.sha3(proxyBytecodeAndConstructor)
 }
 
 const getexecuteMultipleAuthKeyMetaTransactionsSig = async (versionNumber) => {
@@ -510,6 +512,11 @@ const getErc1820RegistrySetData = async (authereumAccountAddress, erc1820Registr
     ])
 }
 
+const getImplementationAddressFromStorageSlot = async (_proxyAddress) => {
+  const _implementationAddress = await web3.eth.getStorageAt(_proxyAddress, constants.IMPLEMENTATION_SLOT)
+  return web3.utils.toChecksumAddress(_implementationAddress)
+}
+
 module.exports = {
   getMethodSign,
   getArbitrarySignedMessage,
@@ -543,5 +550,6 @@ module.exports = {
   deploy1820Contract,
   setAuthereumRecoveryModule,
   setAccountIn1820Registry,
-  getErc1820RegistrySetData
+  getErc1820RegistrySetData,
+  getImplementationAddressFromStorageSlot
 }

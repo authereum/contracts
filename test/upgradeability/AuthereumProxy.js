@@ -52,7 +52,8 @@ contract('AuthereumProxy', function (accounts) {
 
     // Create Logic Contracts
     authereumAccountLogicContract = await ArtifactAuthereumAccount.new()
-    authereumProxyFactoryLogicContract = await ArtifactAuthereumProxyFactory.new(authereumAccountLogicContract.address, authereumEnsManager.address)
+    const _proxyInitCode = await utils.calculateProxyBytecodeAndConstructor(authereumAccountLogicContract.address)
+    authereumProxyFactoryLogicContract = await ArtifactAuthereumProxyFactory.new(_proxyInitCode, authereumEnsManager.address)
     authereumProxyAccountUpgradeLogicContract = await ArtifactAuthereumProxyAccountUpgrade.new()
     authereumProxyAccountUpgradeWithInitLogicContract = await ArtifactAuthereumProxyAccountUpgradeWithInit.new()
 
@@ -108,9 +109,19 @@ contract('AuthereumProxy', function (accounts) {
   })
   describe('implementation', () => {
     context('Happy Path', async () => {
-      it('Should confirm the implementation address after the creation of a proxy', async () => {
-        const implementationAddress = await authereumProxy.implementation()
-        assert.equal(authereumAccountLogicContract.address, implementationAddress)
+      it('Should confirm the implementation address via the data at the storage slot after the creation of a proxy', async () => {
+        const _implementationAddress = await utils.getImplementationAddressFromStorageSlot(authereumProxy.address)
+        assert.equal(authereumAccountLogicContract.address, _implementationAddress)
+      })
+    })
+    context('Non-Happy Path', async () => {
+      it('Should not confirm the implementation address after the creation of a proxy because the getter lives on the implementation and not the proxy', async () => {
+        const _expectedError = 'TypeError: authereumProxy.implementation is not a function'
+        try{
+          await authereumProxy.implementation()
+        } catch (err) {
+          assert.equal(err, _expectedError)
+        }
       })
     })
   })

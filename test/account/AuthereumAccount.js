@@ -69,7 +69,8 @@ contract('AuthereumAccount', function (accounts) {
 
     // Create Logic Contracts
     authereumAccountLogicContract = await ArtifactAuthereumAccount.new()
-    authereumProxyFactoryLogicContract = await ArtifactAuthereumProxyFactory.new(authereumAccountLogicContract.address, authereumEnsManager.address)
+    const _proxyInitCode = await utils.calculateProxyBytecodeAndConstructor(authereumAccountLogicContract.address)
+    authereumProxyFactoryLogicContract = await ArtifactAuthereumProxyFactory.new(_proxyInitCode, authereumEnsManager.address)
     authereumProxyAccountUpgradeLogicContract = await ArtifactAuthereumProxyAccountUpgrade.new()
     authereumProxyAccountUpgradeWithInitLogicContract = await ArtifactAuthereumProxyAccountUpgradeWithInit.new()
 
@@ -122,16 +123,17 @@ contract('AuthereumAccount', function (accounts) {
     context('Happy path', () => {
       it('Should return the name of the contract', async () => {
         const _name = await authereumProxyAccount.name.call()
-        assert.equal(_name, constants.CONTRACT_NAMES.AUTHEREUM_ACCOUNT)
+        assert.equal(_name, constants.CONTRACTS.AUTHEREUM_ACCOUNT.NAME)
       })
     })
   })
-  describe('authereumVersion', () => {
+  describe('version', () => {
     context('Happy path', () => {
-      it('Should return the Authereum contract version', async () => {
-        const authereumVersion = await authereumProxyAccount.authereumVersion.call()
-        const latestVersionIndex = constants.AUTHEREUM_CONTRACT_VERSIONS.length - 1
-        assert.equal(authereumVersion, constants.AUTHEREUM_CONTRACT_VERSIONS[latestVersionIndex])
+      it('Should return the version of the contract', async () => {
+        const _version = await authereumProxyAccount.version.call()
+        const _contractVersions = constants.CONTRACTS.AUTHEREUM_ACCOUNT.VERSIONS
+        const _latestVersionIndex = _contractVersions.length - 1
+        assert.equal(_version, _contractVersions[_latestVersionIndex])
       })
     })
   })

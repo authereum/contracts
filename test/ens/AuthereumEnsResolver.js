@@ -100,6 +100,25 @@ contract('AuthereumEnsResolver', function (accounts) {
   //  Tests  //
   //********//
 
+  describe('name', () => {
+    context('Happy path', () => {
+      it('Should return the name of the contract', async () => {
+        // This contract does not have a `name` variable that defines the
+        // contract name because it also includes a name() variable
+        // for the ENS logic.
+      })
+    })
+  })
+  describe('version', () => {
+    context('Happy path', () => {
+      it('Should return the version of the contract', async () => {
+        const _version = await authereumEnsResolver.version.call()
+        const _contractVersions = constants.CONTRACTS.AUTHEREUM_ENS_RESOLVER.VERSIONS
+        const _latestVersionIndex = _contractVersions.length - 1
+        assert.equal(_version, _contractVersions[_latestVersionIndex])
+      })
+    })
+  })
   describe('setAddr', () => {
     context('Happy Path', async () => {
       it('Should allow a manager (multisig) to setAddr', async () => {

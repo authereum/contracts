@@ -90,7 +90,8 @@ contract('BaseAccount', function (accounts) {
 
     // Create Logic Contracts
     authereumAccountLogicContract = await ArtifactAuthereumAccount.new()
-    authereumProxyFactoryLogicContract = await ArtifactAuthereumProxyFactory.new(authereumAccountLogicContract.address, authereumEnsManager.address)
+    const _proxyInitCode = await utils.calculateProxyBytecodeAndConstructor(authereumAccountLogicContract.address)
+    authereumProxyFactoryLogicContract = await ArtifactAuthereumProxyFactory.new(_proxyInitCode, authereumEnsManager.address)
     authereumProxyAccountUpgradeLogicContract = await ArtifactAuthereumProxyAccountUpgrade.new()
     authereumProxyAccountUpgradeWithInitLogicContract = await ArtifactAuthereumProxyAccountUpgradeWithInit.new()
 
@@ -181,12 +182,12 @@ contract('BaseAccount', function (accounts) {
       accountBalance = await balance.current(authereumProxyAccount.address)
       assert.equal(Number(accountBalance), constants.FOUR_ETHER)
     })
-    it('Should use exactly 21084 gas on a transaction with no data', async () => {
+    it('Should use exactly 21062 gas on a transaction with no data', async () => {
       // NOTE: The update from constantinople to istanbul forced a change in gas here.
       // This test was originally written to determine these changes. Since the
       // fork was successfully implemented, the constantinople checks have been
       // removed.
-      const expectedGas = 21084
+      const expectedGas = 21062
 
       // NOTE: There is a bug in Truffle that causes data to not be sent
       // NOTE: with the transaction when sending with truffle-contracts.
@@ -197,12 +198,12 @@ contract('BaseAccount', function (accounts) {
       })
       assert.equal(transaction.gasUsed, expectedGas)
     })
-    it('Should use exactly 23068 gas on a transaction with data', async () => {
+    it('Should use exactly 22928 gas on a transaction with data', async () => {
       // NOTE: The update from constantinople to istanbul forced a change in gas here.
       // This test was originally written to determine these changes. Since the
       // fork was successfully implemented, the constantinople checks have been
       // removed.
-      const expectedGas = 23068
+      const expectedGas = 22928
 
       // NOTE: There is a bug in Truffle that causes data to not be sent
       // NOTE: with the transaction when sending with truffle-contracts.

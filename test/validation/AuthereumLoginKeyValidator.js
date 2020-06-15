@@ -29,7 +29,17 @@ contract('AuthereumLoginKeyValidator', function (accounts) {
     context('Happy path', () => {
       it('Should return the name of the contract', async () => {
         const _name = await AuthereumLoginKeyValidator.name.call()
-        assert.equal(_name, constants.CONTRACT_NAMES.LOGIN_KEY_VALIDATOR)
+        assert.equal(_name, constants.CONTRACTS.AUTHEREUM_LOGIN_KEY_VALIDATOR.NAME)
+      })
+    })
+  })
+  describe('version', () => {
+    context('Happy path', () => {
+      it('Should return the version of the contract', async () => {
+        const _version = await AuthereumLoginKeyValidator.version.call()
+        const _contractVersions = constants.CONTRACTS.AUTHEREUM_LOGIN_KEY_VALIDATOR.VERSIONS
+        const _latestVersionIndex = _contractVersions.length - 1
+        assert.equal(_version, _contractVersions[_latestVersionIndex])
       })
     })
   })

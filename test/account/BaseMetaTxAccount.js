@@ -12,6 +12,7 @@ const ArtifactAuthereumProxyFactory = artifacts.require('AuthereumProxyFactory')
 const ArtifactAuthereumProxyAccountUpgrade = artifacts.require('UpgradeAccount')
 const ArtifactAuthereumProxyAccountUpgradeWithInit = artifacts.require('UpgradeAccountWithInit')
 const ArtifactAuthereumRecoveryModule = artifacts.require('AuthereumRecoveryModule')
+const ArtifactReturnTransaction = artifacts.require('ReturnTransaction')
 const ArtifactERC1820Registry = artifacts.require('ERC1820Registry')
 
 contract('BaseMetaTxAccount', function (accounts) {
@@ -89,7 +90,8 @@ contract('BaseMetaTxAccount', function (accounts) {
 
     // Create Logic Contracts
     authereumAccountLogicContract = await ArtifactAuthereumAccount.new()
-    authereumProxyFactoryLogicContract = await ArtifactAuthereumProxyFactory.new(authereumAccountLogicContract.address, authereumEnsManager.address)
+    const _proxyInitCode = await utils.calculateProxyBytecodeAndConstructor(authereumAccountLogicContract.address)
+    authereumProxyFactoryLogicContract = await ArtifactAuthereumProxyFactory.new(_proxyInitCode, authereumEnsManager.address)
     authereumProxyAccountUpgradeLogicContract = await ArtifactAuthereumProxyAccountUpgrade.new()
     authereumProxyAccountUpgradeWithInitLogicContract = await ArtifactAuthereumProxyAccountUpgradeWithInit.new()
 
@@ -224,6 +226,46 @@ contract('BaseMetaTxAccount', function (accounts) {
         assert.equal(beforeAccountBal - afterAccountBal, constants.TWO_ETHER)
         // Transaction sent straight from AUTH_KEYS[0] so RELAYER loses nothing
         assert.equal(beforeRelayerBal - afterRelayerBal, 0)
+      })
+      it('Should execute a transaction with complex input and return data', async () => {
+        // This test is used to test if the Authereum Proxy works without ABIEncoderV2
+        await authereumProxyAccount.send(constants.TWO_ETHER, {from: AUTH_KEYS[0]})
+
+        returnTransaction = await ArtifactReturnTransaction.new()
+
+        const returnTestFunction = {
+          name: 'returnTest2',
+          type: 'function',
+          inputs: [
+            {
+              type: 'uint256',
+              name: 'num1'
+            },
+            {
+              type: 'uint256',
+              name: 'num2'
+            }
+          ]
+        }
+
+        const _num1 = 1
+        const _num2 = 2
+        returnTransactionSelector = web3.eth.abi.encodeFunctionSignature(returnTestFunction)
+        returnTransactionData = web3.eth.abi.encodeFunctionCall(returnTestFunction, [_num1, _num2])
+
+        const _to = returnTransaction.address
+
+        const _encodedParameters = await utils.encodeTransactionParams(_to, value, gasLimit, returnTransactionData)
+        const _transactions = [_encodedParameters, _encodedParameters]
+
+        const tx = await authereumProxyAccount.executeMultipleMetaTransactions(
+          _transactions, { from: AUTH_KEYS[0] }
+        )
+
+        const _rawLogs = tx.receipt.rawLogs
+        const _expectedReturn = '0x00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000002'
+        assert.equal(_rawLogs[0].data, _expectedReturn)
+        assert.equal(_rawLogs[1].data, _expectedReturn)
       })
     })
     context('Non-Happy Path', async () => {

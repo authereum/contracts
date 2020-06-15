@@ -119,7 +119,8 @@ contract('AuthereumEnsManager', function (accounts) {
 
     // Create Logic Contracts
     authereumAccountLogicContract = await ArtifactAuthereumAccount.new()
-    authereumProxyFactoryLogicContract = await ArtifactAuthereumProxyFactory.new(authereumAccountLogicContract.address, authereumEnsManager.address)
+    const _proxyInitCode = await utils.calculateProxyBytecodeAndConstructor(authereumAccountLogicContract.address)
+    authereumProxyFactoryLogicContract = await ArtifactAuthereumProxyFactory.new(_proxyInitCode, authereumEnsManager.address)
     authereumProxyAccountUpgradeLogicContract = await ArtifactAuthereumProxyAccountUpgrade.new()
     authereumProxyAccountUpgradeWithInitLogicContract = await ArtifactAuthereumProxyAccountUpgradeWithInit.new()
 
@@ -146,7 +147,8 @@ contract('AuthereumEnsManager', function (accounts) {
 
     // Declare variables
     proxyFactoryAddress = authereumProxyFactoryLogicContract.address
-    saltHash = utils.getSaltHash(constants.SALT, accounts[0])
+    const _initData = await utils.getAuthereumAccountCreationData(AUTH_KEYS[0])
+    saltHash = utils.getSaltHash(constants.SALT, _initData)
 
     // Handle post-proxy deployment
     await authereumProxyAccount.sendTransaction({ value:constants.TWO_ETHER, from: AUTH_KEYS[0] })
@@ -176,7 +178,17 @@ contract('AuthereumEnsManager', function (accounts) {
     context('Happy path', () => {
       it('Should return the name of the contract', async () => {
         const _name = await authereumEnsManager.name.call()
-        assert.equal(_name, constants.CONTRACT_NAMES.AUTHEREUM_ENS_MANAGER)
+        assert.equal(_name, constants.CONTRACTS.AUTHEREUM_ENS_MANAGER.NAME)
+      })
+    })
+  })
+  describe('version', () => {
+    context('Happy path', () => {
+      it('Should return the version of the contract', async () => {
+        const _version = await authereumEnsManager.version.call()
+        const _contractVersions = constants.CONTRACTS.AUTHEREUM_ACCOUNT.VERSIONS
+        const _latestVersionIndex = _contractVersions.length - 1
+        assert.equal(_version, _contractVersions[_latestVersionIndex])
       })
     })
   })
@@ -394,7 +406,8 @@ contract('AuthereumEnsManager', function (accounts) {
 
         // Second user
         const _expectedSalt = constants.SALT + 10
-        const _saltHash = utils.getSaltHash(_expectedSalt, accounts[0])
+        const _initData = await utils.getAuthereumAccountCreationData(AUTH_KEYS[0])
+        const _saltHash = utils.getSaltHash(_expectedSalt, _initData)
         const _label = testtwoLabel
         create2Address = utils.buildCreate2Address(proxyFactoryAddress, _saltHash, proxyCodeAndConstructorHash)
         await utils.createProxy(
