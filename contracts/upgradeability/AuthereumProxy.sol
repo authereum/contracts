@@ -13,8 +13,7 @@ contract AuthereumProxy {
     // of these variables in the implementation.
 
     /// @dev Storage slot with the address of the current implementation.
-    /// @notice This is the keccak-256 hash of "eip1967.proxy.implementation" subtracted 
-    /// @notice by 1, and is validated in the constructor.
+    /// @notice This is the keccak-256 hash of "eip1967.proxy.implementation" subtracted by 1
     bytes32 internal constant IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
 
     /// @dev Set the implementation in the constructor
