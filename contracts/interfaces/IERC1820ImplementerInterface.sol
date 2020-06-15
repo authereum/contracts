@@ -1,4 +1,4 @@
-pragma solidity 0.5.16;
+pragma solidity 0.5.17;
 
 interface IERC1820ImplementerInterface {
     /// @notice Indicates whether the contract implements the interface `interfaceHash` for the address `addr` or not.

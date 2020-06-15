@@ -1,4 +1,4 @@
-pragma solidity 0.5.16;
+pragma solidity 0.5.17;
 
 contract IERC20 {
     function balanceOf(address account) external returns (uint256);

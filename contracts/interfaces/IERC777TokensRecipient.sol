@@ -1,4 +1,4 @@
-pragma solidity 0.5.16;
+pragma solidity 0.5.17;
 
 contract IERC777TokensRecipient {
     /// @dev Notify a send or mint (if from is 0x0) of amount tokens from the from address to the

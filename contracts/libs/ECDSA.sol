@@ -1,4 +1,4 @@
-pragma solidity ^0.5.0;
+pragma solidity 0.5.17;
 
 /**
  * @dev Elliptic Curve Digital Signature Algorithm (ECDSA) operations.
