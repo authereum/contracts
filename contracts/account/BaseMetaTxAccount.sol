@@ -57,8 +57,14 @@ contract BaseMetaTxAccount is BaseAccount {
         // Check if any of the atomic transactions failed, if not, decode return data
         bytes[] memory _returnValues;
         if (!success) {
-            string memory _revertMsg = _getRevertMsg(res);
-            emit CallFailed(_revertMsg);
+            // If there is no prefix to the reversion reason, we know it was an OOG error
+            if (res.length == 0) {
+                revert("BMTA: Atomic call ran out of gas");
+            }
+
+            // All thrown errors will return a prefixed revert message
+            string memory _prefixedRevertMsg = _getRevertMsgFromRes(res);
+            emit CallFailed(_getStrippedRevertMsg(_prefixedRevertMsg));
         } else {
             _returnValues = abi.decode(res, (bytes[]));
         }

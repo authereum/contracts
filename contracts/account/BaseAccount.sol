@@ -21,6 +21,9 @@ contract BaseAccount is AccountState, AccountInitialize, TokenReceiverHooks {
     using SafeMath for uint256;
     using ECDSA for bytes32;
     using BytesLib for bytes;
+    using strings for *;
+
+    string constant public CALL_REVERT_PREFIX = "Authereum Call Revert: ";
 
     modifier onlySelf {
         require(msg.sender == address(this), "BA: Only self allowed");
@@ -107,12 +110,16 @@ contract BaseAccount is AccountState, AccountInitialize, TokenReceiverHooks {
         internal
         returns (bytes memory)
     {
+        // Require that there will be enough gas to complete the atomic transaction
+        // We use 64/63 of the to account for EIP-150 and validate that there will be enough remaining gas
+        // We use 34700 as the max possible cost for a call
+        // NOTE: An out of gas failure after the completion of the call is the concern of the relayer
+        require(gasleft() > _gasLimit.mul(64).div(63).add(34700));
         (bool success, bytes memory res) = _to.call.gas(_gasLimit).value(_value)(_data);
 
         // Get the revert message of the call and revert with it if the call failed
         if (!success) {
-            string memory _revertMsg = _getRevertMsg(res);
-            revert(_revertMsg);
+            revert(_getPrefixedRevertMsg(res));
         }
 
         return res;
@@ -122,10 +129,26 @@ contract BaseAccount is AccountState, AccountInitialize, TokenReceiverHooks {
     /// @notice This is needed in order to get the human-readable revert message from a call
     /// @param _res Response of the call
     /// @return Revert message string
-    function _getRevertMsg(bytes memory _res) internal pure returns (string memory) {
+    function _getRevertMsgFromRes(bytes memory _res) internal pure returns (string memory) {
         // If the _res length is less than 68, then the transaction failed silently (without a revert message)
         if (_res.length < 68) return 'BA: Transaction reverted silently';
         bytes memory revertData = _res.slice(4, _res.length - 4); // Remove the selector which is the first 4 bytes
         return abi.decode(revertData, (string)); // All that remains is the revert string
+    }
+
+    /// @dev Get the prefixed revert message from a call
+    /// @param _res Response of the call
+    /// @return Prefixed revert message string
+    function _getPrefixedRevertMsg(bytes memory _res) internal pure returns (string memory) {
+        string memory _revertMsg = _getRevertMsgFromRes(_res);
+        return string(abi.encodePacked(CALL_REVERT_PREFIX, _revertMsg));
+    }
+
+    /// @dev Strip the prefix from the prefixed revert message
+    /// @param _prefixedRevertMsg Prefixed revert message string
+    /// @return Original revert message string
+    function _getStrippedRevertMsg(string memory _prefixedRevertMsg) internal pure returns (string memory) {
+        strings.slice memory _prefixedRevertMsgSlice = _prefixedRevertMsg.toSlice();
+        return _prefixedRevertMsgSlice.beyond(CALL_REVERT_PREFIX.toSlice()).toString();
     }
 }

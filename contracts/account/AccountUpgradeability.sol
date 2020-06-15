@@ -45,7 +45,7 @@ contract AccountUpgradeability is BaseAccount {
         (bool success, bytes memory res) = _newImplementation.delegatecall(_data);
 
         // Get the revert message of the call and revert with it if the call failed
-        string memory _revertMsg = _getRevertMsg(res);
+        string memory _revertMsg = _getRevertMsgFromRes(res);
         require(success, _revertMsg);
         emit Upgraded(_newImplementation);
     }

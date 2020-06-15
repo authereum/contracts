@@ -27,10 +27,10 @@ contract AuthereumProxyFactory is Owned {
     event AuthereumEnsManagerChanged(address indexed authereumEnsManager);
 
     /// @dev Constructor
-    /// @param _implementation Address of the Authereum implementation
+    /// @param _initCode Init code of the AuthereumProxy and constructor
     /// @param _authereumEnsManagerAddress Address for the Authereum ENS Manager contract
-    constructor(address _implementation, address _authereumEnsManagerAddress) public {
-        initCode = abi.encodePacked(type(AuthereumProxy).creationCode, uint256(_implementation));
+    constructor(bytes memory _initCode, address _authereumEnsManagerAddress) public {
+        initCode = _initCode;
         authereumEnsManagerAddress =  _authereumEnsManagerAddress;
         authereumEnsManager = AuthereumEnsManager(authereumEnsManagerAddress);
         emit InitCodeChanged(initCode);
@@ -42,7 +42,7 @@ contract AuthereumProxyFactory is Owned {
      */
 
     /// @dev Setter for the proxy initCode
-    /// @param _initCode Init code off the AuthereumProxy and constructor
+    /// @param _initCode Init code of the AuthereumProxy and constructor
     function setInitCode(bytes memory _initCode) public onlyOwner {
         initCode = _initCode;
         emit InitCodeChanged(initCode);
