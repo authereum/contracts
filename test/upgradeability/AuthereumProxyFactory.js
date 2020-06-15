@@ -11,6 +11,7 @@ const ArtifactAuthereumProxy = artifacts.require('AuthereumProxy')
 const ArtifactAuthereumProxyFactory = artifacts.require('AuthereumProxyFactory')
 const ArtifactAuthereumProxyAccountUpgrade = artifacts.require('UpgradeAccount')
 const ArtifactAuthereumProxyAccountUpgradeWithInit = artifacts.require('UpgradeAccountWithInit')
+const ArtifactAuthereumRecoveryModule = artifacts.require('AuthereumRecoveryModule')
 
 contract('AuthereumProxyFactory', function (accounts) {
   const AUTHEREUM_OWNER = accounts[0]
@@ -20,6 +21,7 @@ contract('AuthereumProxyFactory', function (accounts) {
   const RECEIVERS = [accounts[5], accounts[6], accounts[7]]
 
   // Test Params
+  let beforeAllSnapshotId
   let snapshotId
 
   // Default Params
@@ -32,8 +34,22 @@ contract('AuthereumProxyFactory', function (accounts) {
   let upgradeAccountBadInitContract
 
   before(async () => {
+    // Take snapshot to reset to a known state
+    // This is required due to the deployment of the 1820 contract
+    beforeAllSnapshotId = await timeUtils.takeSnapshot()
+    
+    // Deploy the recovery module
+    authereumRecoveryModule = await ArtifactAuthereumRecoveryModule.new()
+
+    // Deploy the 1820 contract
+    await utils.deploy1820Contract(AUTHEREUM_OWNER)
+
     // Set up ENS defaults
     const { authereumEnsManager } = await utils.setENSDefaults(AUTHEREUM_OWNER)
+  })
+
+  after(async() => {
+    await timeUtils.revertSnapshot(beforeAllSnapshotId.result)
   })
 
   // Take snapshot before each test and revert after each test
@@ -51,17 +67,25 @@ contract('AuthereumProxyFactory', function (accounts) {
     // Set up Authereum ENS Manager defaults
     await utils.setAuthereumENSManagerDefaults(authereumEnsManager, AUTHEREUM_OWNER, authereumProxyFactoryLogicContract.address, constants.AUTHEREUM_PROXY_RUNTIME_CODE_HASH)
 
-    snapshotId = await timeUtils.takeSnapshot();
-  });
+    snapshotId = await timeUtils.takeSnapshot()
+  })
 
   afterEach(async() => {
-    await timeUtils.revertSnapshot(snapshotId.result);
-  });
+    await timeUtils.revertSnapshot(snapshotId.result)
+  })
 
   //**********//
   //  Tests  //
   //********//
 
+  describe('name', () => {
+    context('Happy path', () => {
+      it('Should return the name of the contract', async () => {
+        const _name = await authereumProxyFactoryLogicContract.name.call()
+        assert.equal(_name, constants.CONTRACT_NAMES.AUTHEREUM_PROXY_FACTORY)
+      })
+    })
+  })
   describe('setInitCode', () => {
     context('Happy Path', async () => {
       it('Should correctly set the new initCode', async () => {

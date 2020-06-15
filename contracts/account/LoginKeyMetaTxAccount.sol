@@ -2,6 +2,7 @@ pragma solidity 0.5.16;
 pragma experimental ABIEncoderV2;
 
 import "./BaseMetaTxAccount.sol";
+import "../interfaces/ILoginKeyTransactionValidator.sol";
 
 /**
  * @title LoginKeyMetaTxAccount
@@ -13,7 +14,7 @@ import "./BaseMetaTxAccount.sol";
 contract LoginKeyMetaTxAccount is BaseMetaTxAccount {
 
     /// @dev Execute an loginKey meta transaction
-    /// @param _transactions Arrays of transaction data ([destination, value, gasLimit, data][...]...)
+    /// @param _transactions Arrays of transaction data ([to, value, gasLimit, data][...]...)
     /// @param _gasPrice Gas price set by the user
     /// @param _gasOverhead Gas overhead of the transaction calculated offchain
     /// @param _loginKeyRestrictionsData Contains restrictions to the loginKey's functionality
@@ -21,7 +22,7 @@ contract LoginKeyMetaTxAccount is BaseMetaTxAccount {
     /// @param _feeTokenRate Rate of the token (in tokenGasPrice/ethGasPrice) used to pay a fee
     /// @param _transactionMessageHashSignature Signed transaction data
     /// @param _loginKeyAttestationSignature Signed loginKey
-    /// @return Response of the call
+    /// @return Return values of the call
     function executeMultipleLoginKeyMetaTransactions(
         bytes[] memory _transactions,
         uint256 _gasPrice,
@@ -37,10 +38,8 @@ contract LoginKeyMetaTxAccount is BaseMetaTxAccount {
     {
         uint256 startGas = gasleft();
 
-        _validateLoginKeyRestrictions(
-            _transactions,
-            _loginKeyRestrictionsData
-        );
+        _validateDestinations(_transactions);
+        _validateRestrictionDataPreHook(_transactions, _loginKeyRestrictionsData);
 
         // Hash the parameters
         bytes32 _transactionMessageHash = keccak256(abi.encode(
@@ -61,13 +60,15 @@ contract LoginKeyMetaTxAccount is BaseMetaTxAccount {
             _transactionMessageHash, _transactionMessageHashSignature, _loginKeyRestrictionsData, _loginKeyAttestationSignature
         );
 
-        (, bytes[] memory _returnValues) = _atomicExecuteMultipleMetaTransactions(
+        (bool success, bytes[] memory _returnValues) = _atomicExecuteMultipleMetaTransactions(
             _transactions,
-            _gasPrice,
-            _gasOverhead,
-            _feeTokenAddress,
-            _feeTokenRate
+            _gasPrice
         );
+
+        // If transaction batch succeeded
+        if (success) {
+            _validateRestrictionDataPostHook(_transactions, _loginKeyRestrictionsData);
+        }
 
         // Refund gas costs
         _issueRefund(startGas, _gasPrice, _gasOverhead, _feeTokenAddress, _feeTokenRate);
@@ -79,39 +80,67 @@ contract LoginKeyMetaTxAccount is BaseMetaTxAccount {
      *  Internal functions
      */
 
-    /// @dev validates all loginKey Restrictions
-    /// @param _transactions Arrays of transaction data ([destination, value, gasLimit, data][...]...)
-    /// @param _loginKeyRestrictionsData Contains restrictions to the loginKey's functionality
-    function _validateLoginKeyRestrictions(
+    /// @dev Decodes the loginKeyRestrictionsData and calls the ILoginKeyTransactionValidator contract's pre-execution hook
+    /// @param _transactions The encoded transactions being executed
+    /// @param _loginKeyRestrictionsData The encoded data used by the ILoginKeyTransactionValidator contract
+    function _validateRestrictionDataPreHook(
         bytes[] memory _transactions,
         bytes memory _loginKeyRestrictionsData
     )
         internal
+    {
+        (address validationContract, bytes memory validationData) = abi.decode(_loginKeyRestrictionsData, (address, bytes));
+        if (validationContract != address(0)) {
+            ILoginKeyTransactionValidator(validationContract).validateTransactions(_transactions, validationData, msg.sender);
+        }
+    }
+
+    /// @dev Decodes the loginKeyRestrictionsData and calls the ILoginKeyTransactionValidator contract's post-execution hook
+    /// @param _transactions The encoded transactions being executed
+    /// @param _loginKeyRestrictionsData The encoded data used by the ILoginKeyTransactionValidator contract
+    function _validateRestrictionDataPostHook(
+        bytes[] memory _transactions,
+        bytes memory _loginKeyRestrictionsData
+    )
+        internal
+    {
+        (address validationContract, bytes memory validationData) = abi.decode(_loginKeyRestrictionsData, (address, bytes));
+        if (validationContract != address(0)) {
+            ILoginKeyTransactionValidator(validationContract).transactionsDidExecute(_transactions, validationData, msg.sender);
+        }
+    }
+
+    /// @dev Validates all loginKey Restrictions
+    /// @param _transactions Arrays of transaction data ([to, value, gasLimit, data][...]...)
+    function _validateDestinations(
+        bytes[] memory _transactions
+    )
+        internal
         view
     {
-        // Check that no calls are made to self
-        address _destination;
-        for(uint i = 0; i < _transactions.length; i++) {
-            (_destination,,,) = _decodeTransactionData(_transactions[i]);
-            require(_destination != address(this), "LKMTA: Login key is not able to call self");
+        // Check that calls made to self and auth keys have no data and are limited in gas
+        address to;
+        uint256 gasLimit;
+        bytes memory data;
+        for (uint i = 0; i < _transactions.length; i++) {
+            (to,,gasLimit,data) = _decodeTransactionData(_transactions[i]);
+
+            if (data.length != 0 || gasLimit > 2300) {
+                require(to != address(this), "LKMTA: Login key is not able to call self");
+                require(!authKeys[to], "LKMTA: Login key is not able to call an Auth key");
+            }
         }
-
-        // Check _validateLoginKeyRestrictions restrictions
-        uint256 loginKeyExpirationTime = abi.decode(_loginKeyRestrictionsData, (uint256));
-
-        // Check that loginKey is not expired
-        require(loginKeyExpirationTime > now, "LKMTA: Login key is expired");
     }
 
     /// @dev Validate signatures from an auth key meta transaction
     /// @param _transactionsMessageHash Ethereum signed message of the transaction
-    /// @param _transactionMessgeHashSignature Signed transaction data
+    /// @param _transactionMessageHashSignature Signed transaction data
     /// @param _loginKeyRestrictionsData Contains restrictions to the loginKey's functionality
     /// @param _loginKeyAttestationSignature Signed loginKey
     /// @return Address of the login key that signed the data
     function _validateLoginKeyMetaTransactionSigs(
         bytes32 _transactionsMessageHash,
-        bytes memory _transactionMessgeHashSignature,
+        bytes memory _transactionMessageHashSignature,
         bytes memory _loginKeyRestrictionsData,
         bytes memory _loginKeyAttestationSignature
     )
@@ -119,7 +148,7 @@ contract LoginKeyMetaTxAccount is BaseMetaTxAccount {
         view
     {
         address _transactionMessageSigner = _transactionsMessageHash.recover(
-            _transactionMessgeHashSignature
+            _transactionMessageHashSignature
         );
 
         bytes32 loginKeyAttestationMessageHash = keccak256(abi.encode(

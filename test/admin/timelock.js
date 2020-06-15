@@ -11,6 +11,7 @@ const ArtifactAuthereumProxy = artifacts.require('AuthereumProxy')
 const ArtifactAuthereumProxyFactory = artifacts.require('AuthereumProxyFactory')
 const ArtifactAuthereumProxyAccountUpgrade = artifacts.require('UpgradeAccount')
 const ArtifactAuthereumProxyAccountUpgradeWithInit = artifacts.require('UpgradeAccountWithInit')
+const ArtifactAuthereumRecoveryModule = artifacts.require('AuthereumRecoveryModule')
 
 contract('Timelock', function (accounts) {
   const OWNER = accounts[0]
@@ -20,6 +21,7 @@ contract('Timelock', function (accounts) {
   const RECEIVER = accounts[4]
 
   // Test Params
+  let beforeAllSnapshotId
   let snapshotId
 
   // Parameters
@@ -27,7 +29,7 @@ contract('Timelock', function (accounts) {
   let expectedSalt
   let expectedCreationCodeHash
   let nonce
-  let destination
+  let to
   let value
   let data
   let gasPrice
@@ -46,6 +48,7 @@ contract('Timelock', function (accounts) {
   let authereumProxyAccountUpgradeWithInitLogicContract
 
   // Contract Instances
+  let authereumRecoveryModule
   let timelockInstance
   let authereumProxy
   let authereumProxyAccount
@@ -53,6 +56,16 @@ contract('Timelock', function (accounts) {
   let authereumProxyAccountUpgradeWithInit
 
   before(async () => {
+    // Take snapshot to reset to a known state
+    // This is required due to the deployment of the 1820 contract
+    beforeAllSnapshotId = await timeUtils.takeSnapshot()
+    
+    // Deploy the recovery module
+    authereumRecoveryModule = await ArtifactAuthereumRecoveryModule.new()
+
+    // Deploy the 1820 contract
+    await utils.deploy1820Contract(AUTHEREUM_OWNER)
+
     // Set up ENS defaults
     const { authereumEnsManager } = await utils.setENSDefaults(AUTHEREUM_OWNER)
 
@@ -88,21 +101,25 @@ contract('Timelock', function (accounts) {
 
     // Transaction parameters
     nonce = 0
-    destination = RECEIVER[0]
+    to = RECEIVER[0]
     value = constants.ONE_ETHER
     data = '0x00'
 
     timelockInstance = await TimelockContract.new(constants.ONE_MONTH, constants.ONE_WEEK)
   })
 
-   // Take snapshot before each test and revert after each test
+   after(async() => {
+    await timeUtils.revertSnapshot(beforeAllSnapshotId.result)
+  })
+
+  // Take snapshot before each test and revert after each test
   beforeEach(async() => {
-    snapshotId = await timeUtils.takeSnapshot();
-  });
+    snapshotId = await timeUtils.takeSnapshot()
+  })
 
   afterEach(async() => {
-    await timeUtils.revertSnapshot(snapshotId.result);
-  });
+    await timeUtils.revertSnapshot(snapshotId.result)
+  })
 
   //* ********//
   //  Tests  //
@@ -407,7 +424,7 @@ contract('Timelock', function (accounts) {
     })
   })
   describe('cancelChange', () => {
-    it('Should cancel a pending change', async () => {
+    it.skip('Should cancel a pending change', async () => {
       const currentBlock = await web3.eth.getBlock('latest')
       const expectedTimestamp = currentBlock.timestamp
       await timelockInstance.initiateChange(data, RECEIVER)

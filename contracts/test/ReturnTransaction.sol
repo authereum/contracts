@@ -8,9 +8,15 @@ pragma solidity 0.5.16;
 
 contract ReturnTransaction {
     event UintEvent(uint256 _data);
+    event UintEvent2(uint256 num1, uint256 num2);
 
     function returnTest() external payable returns (uint256) {
         emit UintEvent(123);
         return 123;
+    }
+
+    function returnTest2(uint256 num1, uint256 num2) external payable returns (uint256) {
+        emit UintEvent2(num1, num2);
+        return num1;
     }
 }

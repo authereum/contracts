@@ -10,6 +10,7 @@ import "../base/Owned.sol";
  */
 
 contract AuthereumEnsResolverProxy is Owned {
+    string constant public name = "Authereum ENS Resolver Proxy";
     string constant public authereumEnsResolverProxyVersion = "2019111500";
 
     /// @dev Storage slot with the address of the current implementation.

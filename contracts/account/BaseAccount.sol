@@ -21,22 +21,21 @@ contract BaseAccount is AccountState, AccountInitialize, TokenReceiverHooks {
     using ECDSA for bytes32;
     using BytesLib for bytes;
 
-    // Include a CHAIN_ID const
-    uint256 constant private CHAIN_ID = 1;
-
     modifier onlySelf {
         require(msg.sender == address(this), "BA: Only self allowed");
-        _;
-    }
-
-    modifier onlyAuthKeySender {
-        require(_isValidAuthKey(msg.sender), "BA: Auth key is invalid");
         _;
     }
 
     modifier onlyAuthKeySenderOrSelf {
         require(_isValidAuthKey(msg.sender) || msg.sender == address(this), "BA: Auth key or self is invalid");
         _;
+    }
+
+    // Initialize logic contract via the constructor so it does not need to be done manually
+    // after the deployment of the logic contract. Using max uint ensures that the true
+    // lastInitializedVersion is never reached.
+    constructor () public {
+        lastInitializedVersion = uint256(-1);
     }
 
     // This is required for funds sent to this contract
@@ -49,7 +48,11 @@ contract BaseAccount is AccountState, AccountInitialize, TokenReceiverHooks {
     /// @dev Get the chain ID constant
     /// @return The chain id
     function getChainId() public pure returns (uint256) {
-        return CHAIN_ID;
+        uint256 id;
+        assembly {
+            id := chainid()
+        }
+        return id;
     }
 
     /**
@@ -60,6 +63,7 @@ contract BaseAccount is AccountState, AccountInitialize, TokenReceiverHooks {
     /// @param _authKey Address of the auth key to add
     function addAuthKey(address _authKey) external onlyAuthKeySenderOrSelf {
         require(authKeys[_authKey] == false, "BA: Auth key already added");
+        require(_authKey != address(this), "BA: Cannot add self as an auth key");
         authKeys[_authKey] = true;
         numAuthKeys += 1;
         emit AuthKeyAdded(_authKey);
@@ -88,13 +92,13 @@ contract BaseAccount is AccountState, AccountInitialize, TokenReceiverHooks {
 
     /// @dev Execute a transaction without a refund
     /// @notice This is the transaction sent from the CBA
-    /// @param _destination Destination of the transaction
+    /// @param _to To address of the transaction
     /// @param _value Value of the transaction
     /// @param _gasLimit Gas limit of the transaction
     /// @param _data Data of the transaction
     /// @return Response of the call
     function _executeTransaction(
-        address _destination,
+        address _to,
         uint256 _value,
         uint256 _gasLimit,
         bytes memory _data
@@ -102,7 +106,7 @@ contract BaseAccount is AccountState, AccountInitialize, TokenReceiverHooks {
         internal
         returns (bytes memory)
     {
-        (bool success, bytes memory res) = _destination.call.gas(_gasLimit).value(_value)(_data);
+        (bool success, bytes memory res) = _to.call.gas(_gasLimit).value(_value)(_data);
 
         // Get the revert message of the call and revert with it if the call failed
         if (!success) {

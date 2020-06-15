@@ -15,6 +15,7 @@ import "../utils/strings.sol";
 contract AuthereumEnsManager is Owned {
     using strings for *;
 
+    string constant public name = "Authereum ENS Manager";
     string constant public authereumEnsManagerVersion = "2020020200";
 
     // namehash('addr.reverse')
@@ -49,8 +50,8 @@ contract AuthereumEnsManager is Owned {
     }
 
     /// @dev Constructor that sets the ENS root name and root node to manage
-    /// @param _rootName The root name (e.g. authereum.eth)
-    /// @param _rootNode The node of the root name (e.g. namehash(authereum.eth))
+    /// @param _rootName The root name (e.g. auth.eth)
+    /// @param _rootNode The node of the root name (e.g. namehash(auth.eth))
     /// @param _ensRegistry Public ENS Registry address
     /// @param _authereumEnsResolver Custom Autheruem ENS Resolver address
     constructor(
@@ -179,11 +180,11 @@ contract AuthereumEnsManager is Owned {
         strings.slice[] memory parts = new strings.slice[](2);
         parts[0] = _label.toSlice();
         parts[1] = rootName.toSlice();
-        string memory name = ".".toSlice().join(parts);
+        string memory _name = ".".toSlice().join(parts);
         bytes32 reverseNode = EnsReverseRegistrar(getEnsReverseRegistrar()).node(_owner);
-        AuthereumEnsResolver(authereumEnsResolver).setName(reverseNode, name);
+        AuthereumEnsResolver(authereumEnsResolver).setName(reverseNode, _name);
 
-        emit Registered(_owner, name);
+        emit Registered(_owner, _name);
     }
 
     /**

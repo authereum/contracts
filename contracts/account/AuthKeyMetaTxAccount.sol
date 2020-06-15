@@ -12,12 +12,13 @@ import "./BaseMetaTxAccount.sol";
 contract AuthKeyMetaTxAccount is BaseMetaTxAccount {
 
     /// @dev Execute multiple authKey meta transactions
-    /// @param _transactions Arrays of transaction data ([destination, value, gasLimit, data][...]...)
+    /// @param _transactions Arrays of transaction data ([to, value, gasLimit, data][...]...)
     /// @param _gasPrice Gas price set by the user
     /// @param _gasOverhead Gas overhead of the transaction calculated offchain
     /// @param _feeTokenAddress Address of the token used to pay a fee
     /// @param _feeTokenRate Rate of the token (in tokenGasPrice/ethGasPrice) used to pay a fee
     /// @param _transactionMessageHashSignature Signed transaction data
+    /// @return Return values of the call
     function executeMultipleAuthKeyMetaTransactions(
         bytes[] memory _transactions,
         uint256 _gasPrice,
@@ -52,15 +53,10 @@ contract AuthKeyMetaTxAccount is BaseMetaTxAccount {
 
         (, bytes[] memory _returnValues) = _atomicExecuteMultipleMetaTransactions(
             _transactions,
-            _gasPrice,
-            _gasOverhead,
-            _feeTokenAddress,
-            _feeTokenRate
+            _gasPrice
         );
 
-        if (_shouldRefund(_transactions)) {
-          _issueRefund(_startGas, _gasPrice, _gasOverhead, _feeTokenAddress, _feeTokenRate);
-        }
+        _issueRefund(_startGas, _gasPrice, _gasOverhead, _feeTokenAddress, _feeTokenRate);
 
         return _returnValues;
     }
@@ -82,19 +78,5 @@ contract AuthKeyMetaTxAccount is BaseMetaTxAccount {
     {
         address _authKey = _transactionMessageHash.recover(_transactionMessageHashSignature);
         require(_isValidAuthKey(_authKey), "AKMTA: Auth key is invalid");
-    }
-
-    /// @dev Check whether a refund should be issued
-    /// @notice A refund should not be issued if the account is performing an Authereum-related update
-    /// @param _transactions Arrays of transaction data ([destination, value, gasLimit, data][...]...)
-    /// @return True if a refund should be issued
-    function _shouldRefund(bytes[] memory _transactions) internal view returns (bool) {
-        address _destination;
-        for(uint i = 0; i < _transactions.length; i++) {
-            (_destination,,,) = _decodeTransactionData(_transactions[i]);
-            if (_destination != address(this)) return true;
-        }
-
-        return false;
     }
 }

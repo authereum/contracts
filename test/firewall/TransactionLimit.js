@@ -30,7 +30,7 @@
 //   let expectedSalt
 //   let expectedCreationCodeHash
 //   let nonce
-//   let destination
+//   let to
 //   let value
 //   let data
 //   let gasPrice
@@ -90,7 +90,7 @@
 
 //     // Transaction parameters
 //     nonce = 0
-//     destination = RECEIVERS[0]
+//     to = RECEIVERS[0]
 //     value = constants.ONE_ETHER
 //     data = '0x00'
 //   })

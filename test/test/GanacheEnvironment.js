@@ -1,10 +1,12 @@
 const utils = require('../utils/utils')
 const constants = require('../utils/constants.js')
+const timeUtils = require('../utils/time.js')
 
 const ArtifactAuthereumAccount = artifacts.require('AuthereumAccount')
 const ArtifactAuthereumProxy = artifacts.require('AuthereumProxy')
 const ArtifactAuthereumProxyFactory = artifacts.require('AuthereumProxyFactory')
 const ArtifactTestERC20 = artifacts.require('TestERC20')
+const ArtifactAuthereumRecoveryModule = artifacts.require('AuthereumRecoveryModule')
 
 contract('GanacheEnvironment', function (accounts) {
   const AUTHEREUM_OWNER = accounts[0]
@@ -13,6 +15,9 @@ contract('GanacheEnvironment', function (accounts) {
   // Token Params
   const DEFAULT_TOKEN_SUPPLY = constants.DEFAULT_TOKEN_SUPPLY
   const DEFAULT_TOKEN_DECIMALS = constants.DEFAULT_TOKEN_DECIMALS
+
+  // Testing params
+  let beforeAllSnapshotId
 
   // Parameters
   let _ensRegistry
@@ -33,9 +38,20 @@ contract('GanacheEnvironment', function (accounts) {
   let authereumAccountLogicContract
 
   // Contract Instances
+  let authereumRecoveryModule
   let authereumProxyAccount
 
   before(async () => {
+    // Take snapshot to reset to a known state
+    // This is required due to the deployment of the 1820 contract
+    beforeAllSnapshotId = await timeUtils.takeSnapshot()
+    
+    // Deploy the recovery module
+    authereumRecoveryModule = await ArtifactAuthereumRecoveryModule.new()
+
+    // Deploy the 1820 contract
+    await utils.deploy1820Contract(AUTHEREUM_OWNER)
+
     // Set up ENS defaults
     const { ensRegistry, ensReverseRegistrar, authereumEnsResolver, authereumEnsManager }= await utils.setENSDefaults(AUTHEREUM_OWNER)
     _ensRegistry = ensRegistry
@@ -68,6 +84,10 @@ contract('GanacheEnvironment', function (accounts) {
     saiToken = await ArtifactTestERC20.new([AUTHEREUM_OWNER], DEFAULT_TOKEN_SUPPLY, 'AUTH1', 'AuthereumToken1', DEFAULT_TOKEN_DECIMALS)
     batToken = await ArtifactTestERC20.new([AUTHEREUM_OWNER], DEFAULT_TOKEN_SUPPLY, 'AUTH2', 'AuthereumToken2', DEFAULT_TOKEN_DECIMALS)
     gntToken = await ArtifactTestERC20.new([AUTHEREUM_OWNER], DEFAULT_TOKEN_SUPPLY, 'AUTH3', 'AuthereumToken3', DEFAULT_TOKEN_DECIMALS)
+  })
+
+  after(async() => {
+    await timeUtils.revertSnapshot(beforeAllSnapshotId.result)
   })
 
   //**********//

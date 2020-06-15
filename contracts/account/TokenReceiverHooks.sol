@@ -1,9 +1,8 @@
 pragma solidity 0.5.16;
 
-import "../interfaces/IERC721Receiver.sol";
-import "../interfaces/IERC1155TokenReceiver.sol";
-
-contract TokenReceiverHooks is IERC721Receiver, IERC1155TokenReceiver {
+contract TokenReceiverHooks {
+    bytes32 constant private TOKENS_RECIPIENT_INTERFACE_HASH = 0xb281fc8c12954d22544db45de3159a39272895b169a852b314f9cc762e44c53b;
+    bytes32 constant private ERC1820_ACCEPT_MAGIC = keccak256(abi.encodePacked("ERC1820_ACCEPT_MAGIC"));
 
     /**
      *  ERC721
@@ -52,4 +51,38 @@ contract TokenReceiverHooks is IERC721Receiver, IERC1155TokenReceiver {
         return this.onERC1155BatchReceived.selector;
     }
 
+    /**
+     *  ERC777
+     */
+
+    /// @dev Notify a send or mint (if from is 0x0) of amount tokens from the from address to the
+    ///      to address by the operator address.
+    /// param operator Address which triggered the balance increase (through sending or minting).
+    /// param from Holder whose tokens were sent (or 0x0 for a mint).
+    /// param to Recipient of the tokens.
+    /// param amount Number of tokens the recipient balance is increased by.
+    /// param data Information provided by the holder.
+    /// param operatorData Information provided by the operator.
+    function tokensReceived(
+        address,
+        address,
+        address,
+        uint256,
+        bytes calldata,
+        bytes calldata
+    ) external { }
+
+    /**
+     *  ERC1820
+     */
+
+    /// @dev Indicates whether the contract implements the interface `interfaceHash` for the address `addr` or not.
+    /// @param interfaceHash keccak256 hash of the name of the interface
+    /// @param addr Address for which the contract will implement the interface
+    /// @return ERC1820_ACCEPT_MAGIC only if the contract implements `interfaceHash` for the address `addr`.
+    function canImplementInterfaceForAddress(bytes32 interfaceHash, address addr) external view returns(bytes32) {
+        if (interfaceHash == TOKENS_RECIPIENT_INTERFACE_HASH && addr == address(this)) {
+            return ERC1820_ACCEPT_MAGIC;
+        }
+    }
 }

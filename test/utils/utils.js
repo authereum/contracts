@@ -44,10 +44,10 @@ const getAuthSignedMessage = (msg) => {
 }
 
 // Encode tx data params
-const encodeTransactionParams = async (destination, value, gasLimit, data) => {
+const encodeTransactionParams = async (to, value, gasLimit, data) => {
   return web3.eth.abi.encodeParameters(
     ['address', 'uint256', 'uint256', 'bytes'],
-    [destination, value, gasLimit, data]
+    [to, value, gasLimit, data]
   )
 }
 
@@ -240,8 +240,13 @@ function encodeUpgradeToAndCall(implementationAddress, data) {
 }
 
 const getAuthereumAccountCreationData = async (authKey) => {
-  return [
-    await web3.eth.abi.encodeFunctionCall({
+  const creationDataV1 = await getAuthereumAccountCreationDataV1(authKey)
+  return [creationDataV1]
+}
+
+const getAuthereumAccountCreationDataV1 = async (authKey) => {
+  authKey = web3.utils.toChecksumAddress(authKey)
+  return web3.eth.abi.encodeFunctionCall({
       name: 'initializeV1',
       type: 'function',
       inputs: [{
@@ -249,7 +254,6 @@ const getAuthereumAccountCreationData = async (authKey) => {
           name: '_authKey'
       }]
   }, [authKey])
-  ]
 }
 
 // NOTE: There is no init function to call when being updated, so the data is
@@ -276,15 +280,33 @@ const getAuthereumAccountCreationDataWithUpgradeWithInit = async (authKey) => {
   ]
 }
 
+
+const createDefaultProxy = async (
+  salt,
+  txOrigin,
+  authereumProxyFactory,
+  authKey,
+  authereumRecoveryModule,
+  label,
+  authereumAccountLogicContractAddress
+) => {
+  return await createProxy(
+    salt, txOrigin, authereumProxyFactory, authKey, authereumRecoveryModule,
+    label, authereumAccountLogicContractAddress
+  )
+}
+
 const createProxy = async (
   salt,
   txOrigin,
   authereumProxyFactory,
   authKey,
   label,
-  logicContractAddress
+  logicContractAddress,
 ) => {
   const saltHash = getSaltHash(salt, txOrigin)
+  // NOTE: This data is expected to be the data for the latest AccountInitialize
+  // version
   const accountCreationData = await getAuthereumAccountCreationData(authKey)
 
   await authereumProxyFactory.createProxy(salt, label, accountCreationData)
@@ -292,19 +314,6 @@ const createProxy = async (
   // Deploy the proxy
   const proxyCreationHash = await calculateProxyBytecodeAndConstructorHash(logicContractAddress)
   return buildCreate2Address(authereumProxyFactory.address, saltHash, proxyCreationHash)
-}
-
-const createDefaultProxy = async (
-  salt,
-  txOrigin,
-  authereumProxyFactory,
-  authKey,
-  label,
-  authereumAccountLogicContractAddress
-) => {
-  return await createProxy(
-    salt, txOrigin, authereumProxyFactory, authKey, label, authereumAccountLogicContractAddress,
-  )
 }
 
 const calculateProxyBytecodeAndConstructor = async (logicContract) => {
@@ -324,7 +333,7 @@ const getexecuteMultipleAuthKeyMetaTransactionsSig = async (versionNumber) => {
         type: 'function',
         inputs: [{
             type: 'address[]',
-            name: '_destinations'
+            name: '_tos'
         },{
             type: 'bytes[]',
             name: '_datas'
@@ -381,7 +390,7 @@ const getexecuteMultipleLoginKeyMetaTransactionsSig = async (versionNumber) => {
         type: 'function',
         inputs: [{
             type: 'address[]',
-            name: '_destinations'
+            name: '_tos'
         },{
             type: 'bytes[]',
             name: '_datas'
@@ -440,6 +449,67 @@ const getexecuteMultipleLoginKeyMetaTransactionsSig = async (versionNumber) => {
   }
 }
 
+function expectRawEvent(txReceipt, eventSignature) {
+  const eventTopic = web3.utils.sha3(eventSignature)
+  const events = txReceipt.receipt.rawLogs.filter( log => {
+    return log.topics[0] === eventTopic
+  })
+  expect(events.length).to.be.gt(0)
+}
+
+const deploy1820Contract = async (deployer) => {
+  // Fund the ERC1820_DEPLOYER_ADDRESS
+  await web3.eth.sendTransaction({
+    from: deployer,
+    to: constants.ERC1820_DEPLOYER_ADDRESS,
+    value: web3.utils.toWei('0.08')
+  })
+
+  await web3.eth.sendSignedTransaction(constants.ERC1820_SIGNED_DEPLOY_TRANSACTION)
+}
+
+const setAuthereumRecoveryModule = async (authereumAccount, authereumRecoveryModuleAddress, authKeyAddress) => {
+  return authereumAccount.addAuthKey(
+    authereumRecoveryModuleAddress, { from: authKeyAddress }
+  )
+}
+
+const setAccountIn1820Registry = async (authereumAccount, erc1820RegistryAddress, authKeyAddress) => {
+  const _to = erc1820RegistryAddress
+  const _value = '0'
+  const _gasLimit = '1000000'
+  const _data =  await getErc1820RegistrySetData(authereumAccount.address, erc1820RegistryAddress)
+  const _encodedParameters = await encodeTransactionParams(_to, _value, _gasLimit, _data)
+  const _transactions = [_encodedParameters]
+
+  await authereumAccount.executeMultipleMetaTransactions(
+    _transactions, { from: authKeyAddress }
+  )
+
+}
+
+const getErc1820RegistrySetData = async (authereumAccountAddress, erc1820RegistryAddress) => {
+  authereumAccountAddress = web3.utils.toChecksumAddress(authereumAccountAddress)
+  erc1820RegistryAddress = web3.utils.toChecksumAddress(erc1820RegistryAddress)
+  return  web3.eth.abi.encodeFunctionCall({
+      name: 'setInterfaceImplementer',
+      type: 'function',
+      inputs: [{
+          type: 'address',
+          name: 'account'
+      }, {
+          type: 'bytes32',
+          name: 'interfaceHash'
+      }, {
+          type: 'address',
+          name: 'implementer'
+      }]
+  }, [authereumAccountAddress,
+      constants.TOKENS_RECIPIENT_INTERFACE_HASH,
+      authereumAccountAddress
+    ])
+}
+
 module.exports = {
   getMethodSign,
   getArbitrarySignedMessage,
@@ -460,12 +530,18 @@ module.exports = {
   encodeUpgrade,
   encodeUpgradeToAndCall,
   getAuthereumAccountCreationData,
+  getAuthereumAccountCreationDataV1,
   getAuthereumAccountCreationDataWithUpgrade,
   getAuthereumAccountCreationDataWithUpgradeWithInit,
-  createProxy,
   createDefaultProxy,
+  createProxy,
   calculateProxyBytecodeAndConstructor,
   calculateProxyBytecodeAndConstructorHash,
   getexecuteMultipleAuthKeyMetaTransactionsSig,
-  getexecuteMultipleLoginKeyMetaTransactionsSig
+  getexecuteMultipleLoginKeyMetaTransactionsSig,
+  expectRawEvent,
+  deploy1820Contract,
+  setAuthereumRecoveryModule,
+  setAccountIn1820Registry,
+  getErc1820RegistrySetData
 }

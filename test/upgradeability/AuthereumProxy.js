@@ -8,6 +8,8 @@ const ArtifactAuthereumProxy = artifacts.require('AuthereumProxy')
 const ArtifactAuthereumProxyFactory = artifacts.require('AuthereumProxyFactory')
 const ArtifactAuthereumProxyAccountUpgrade = artifacts.require('UpgradeAccount')
 const ArtifactAuthereumProxyAccountUpgradeWithInit = artifacts.require('UpgradeAccountWithInit')
+const ArtifactAuthereumRecoveryModule = artifacts.require('AuthereumRecoveryModule')
+const ArtifactERC1820Registry = artifacts.require('ERC1820Registry')
 
 contract('AuthereumProxy', function (accounts) {
   const AUTHEREUM_OWNER = accounts[0]
@@ -17,6 +19,7 @@ contract('AuthereumProxy', function (accounts) {
   const RECEIVERS = [accounts[5], accounts[6], accounts[7]]
 
   // Test Params
+  let beforeAllSnapshotId
   let snapshotId
 
   // Parameters
@@ -31,8 +34,19 @@ contract('AuthereumProxy', function (accounts) {
   let expectedAuthereumEnsManager
   let expectedLabel
   let data
+  let erc1820Registry
 
   before(async () => {
+    // Take snapshot to reset to a known state
+    // This is required due to the deployment of the 1820 contract
+    beforeAllSnapshotId = await timeUtils.takeSnapshot()
+    
+    // Deploy the recovery module
+    authereumRecoveryModule = await ArtifactAuthereumRecoveryModule.new()
+
+    // Deploy the 1820 contract
+    await utils.deploy1820Contract(AUTHEREUM_OWNER)
+
     // Set up ENS defaults
     const { authereumEnsManager } = await utils.setENSDefaults(AUTHEREUM_OWNER)
 
@@ -54,20 +68,33 @@ contract('AuthereumProxy', function (accounts) {
       expectedSalt, accounts[0], authereumProxyFactoryLogicContract,
       AUTH_KEYS[0], label, authereumAccountLogicContract.address
     )
+
+    // Set up IERC1820 contract
+    erc1820Registry = await ArtifactERC1820Registry.at(constants.ERC1820_REGISTRY_ADDRESS)
+
     // Wrap in truffle-contract
     badContract = await ArtifactBadTransaction.new()
     authereumProxy = await ArtifactAuthereumProxy.at(expectedAddress)
     authereumProxyAccount = await ArtifactAuthereumAccount.at(expectedAddress)
+
+    // Handle post-proxy deployment
+    await authereumProxyAccount.sendTransaction({ value:constants.TWO_ETHER, from: AUTH_KEYS[0] })
+    await utils.setAuthereumRecoveryModule(authereumProxyAccount, authereumRecoveryModule.address, AUTH_KEYS[0])
+    await utils.setAccountIn1820Registry(authereumProxyAccount, erc1820Registry.address, AUTH_KEYS[0])
+  })
+
+  after(async() => {
+    await timeUtils.revertSnapshot(beforeAllSnapshotId.result)
   })
 
   // Take snapshot before each test and revert after each test
   beforeEach(async() => {
-    snapshotId = await timeUtils.takeSnapshot();
-  });
+    snapshotId = await timeUtils.takeSnapshot()
+  })
 
   afterEach(async() => {
-    await timeUtils.revertSnapshot(snapshotId.result);
-  });
+    await timeUtils.revertSnapshot(snapshotId.result)
+  })
 
   //**********//
   //  Tests  //
