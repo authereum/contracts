@@ -90,7 +90,7 @@ contract AuthereumProxyFactory is Owned {
     {
         address payable addr;
         bytes memory _initCode = initCode;
-        bytes32 salt = _getSalt(_salt, msg.sender);
+        bytes32 salt = _getSalt(_salt, _initData);
 
         // Create proxy
         assembly {
@@ -114,10 +114,11 @@ contract AuthereumProxyFactory is Owned {
         return AuthereumProxy(addr);
     }
 
-    /// @dev Generate a salt out of a uint256 value and the sender
+    /// @dev Generate a salt out of a uint256 value and the init data
     /// @param _salt A uint256 value to add randomness to the account creation
-    /// @param _sender Sender of the transaction
-    function _getSalt(uint256 _salt, address _sender) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(_salt, _sender)); 
+    /// @param _initData Array of initialize data
+    function _getSalt(uint256 _salt, bytes[] memory _initData) internal pure returns (bytes32) {
+        bytes32 _initDataHash = keccak256(abi.encode(_initData));
+        return keccak256(abi.encodePacked(_salt, _initDataHash)); 
     }
 }
