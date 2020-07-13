@@ -1,10 +1,9 @@
-pragma solidity 0.5.16;
+pragma solidity 0.5.17;
 pragma experimental ABIEncoderV2;
 
 import "../account/AuthereumAccount.sol";
 import "../libs/BytesLib.sol";
 import "../libs/SafeMath.sol";
-import "../utils/ReentrancyGuard.sol";
 
 /**
  * @title AuthereumDelegateKeyModule
@@ -23,9 +22,12 @@ import "../utils/ReentrancyGuard.sol";
  *         are dynamically-sized.
  */
 
-contract AuthereumDelegateKeyModule is ReentrancyGuard {
+contract AuthereumDelegateKeyModule {
     using SafeMath for uint256;
     using BytesLib for bytes;
+
+    string constant public name = "Authereum Delegate Key Module";
+    string constant public version = "2020070100";
 
     /**
      * Events
@@ -64,9 +66,6 @@ contract AuthereumDelegateKeyModule is ReentrancyGuard {
         bytes32[] lockedParameterValues;
     }
 
-    string constant public name = "Authereum Delegate Key Module";
-    string constant public authereumDelegateKeyModuleVersion = "2020042500";
-
     mapping(address => mapping(address => DelegateKey)) public delegateKeys;
 
     /**
@@ -75,14 +74,14 @@ contract AuthereumDelegateKeyModule is ReentrancyGuard {
 
     modifier onlyActiveDelegateKey(address _authereumAccount) {
         DelegateKey memory delegateKey = delegateKeys[_authereumAccount][msg.sender];
-        require(delegateKey.active == true, "DKM: Delegate Key is not active");
+        require(delegateKey.active == true, "ADKM: Delegate Key is not active");
         _;
     }
 
     modifier onlyWhenRegisteredModule {
         require(
             AuthereumAccount(msg.sender).authKeys(address(this)),
-            "DKM: Delegate Key module not registered to account"
+            "ADKM: Delegate Key module not registered to account"
         );
         _;
     }
@@ -114,11 +113,11 @@ contract AuthereumDelegateKeyModule is ReentrancyGuard {
         external
         onlyWhenRegisteredModule
     {
-        require(_delegateKeyAddress != address(0), "DKM: Delegate Key cannot be address(0)");
-        require(delegateKeys[msg.sender][_delegateKeyAddress].active != true, "DKM: Delegate Key is already registered");
+        require(_delegateKeyAddress != address(0), "ADKM: Delegate Key cannot be address(0)");
+        require(delegateKeys[msg.sender][_delegateKeyAddress].active != true, "ADKM: Delegate Key is already registered");
         require(
             _lockedParameters.length == _lockedParameterValues.length,
-            "DKM: lockedParameters must be the same length as lockedParameterValues"
+            "ADKM: lockedParameters must be the same length as lockedParameterValues"
         );
 
         delegateKeys[msg.sender][_delegateKeyAddress] = DelegateKey(
@@ -144,14 +143,14 @@ contract AuthereumDelegateKeyModule is ReentrancyGuard {
     /// @param _delegateKeyAddress Address of the Delegate Key
     function removeDelegateKey(address _delegateKeyAddress) external {
         DelegateKey memory delegateKey = delegateKeys[msg.sender][_delegateKeyAddress];
-        require(delegateKey.active == true, "DKM: Delegate Key is not active");
+        require(delegateKey.active == true, "ADKM: Delegate Key is not active");
         
         delete delegateKeys[msg.sender][_delegateKeyAddress];
         
         emit DelegateKeyRemoved(msg.sender, _delegateKeyAddress);
     }
 
-    /// @dev Validates and then exectutes a transaction with the Authereum account
+    /// @dev Validates and then executes a transaction with the Authereum account
     /// @dev Called by the Delegate Key
     /// @param _authereumAccount Address of the Authereum account that the Delegate Key is making
     ///        a transaction for
@@ -164,22 +163,23 @@ contract AuthereumDelegateKeyModule is ReentrancyGuard {
         bytes calldata _data
     )
         external
-        nonReentrant
         onlyActiveDelegateKey(_authereumAccount)
         returns (bytes[] memory)
     {
         DelegateKey memory delegateKey = delegateKeys[_authereumAccount][msg.sender];
 
         // Validate value
-        require(_value <= delegateKey.maxValue, "DKM: Value is higher than maximum allowed value");
+        require(_value <= delegateKey.maxValue, "ADKM: Value is higher than maximum allowed value");
 
         _validateCalldata(delegateKey, _data);
+
+        uint256 _gasLimit = _getExecutionGasLimit();
 
         return _executeTransaction(
             _authereumAccount,
             delegateKey.approvedDestination,
             _value,
-            gasleft(),
+            _gasLimit,
             _data
         );
     }
@@ -202,13 +202,13 @@ contract AuthereumDelegateKeyModule is ReentrancyGuard {
         // Validate functionSelector
         require(
             functionSelector == _delegateKey.approvedFunctionSelector,
-            "DKM: Invalid function selector"
+            "ADKM: Invalid function selector"
         );
 
         // Validate locked values
         for (uint256 i = 0; i < lockedParameters.length; i++) {
             if (lockedParameters[i]) {
-                require(lockedParameterValues[i] == parameters[i], "DKM: Invalid parameter");
+                require(lockedParameterValues[i] == parameters[i], "ADKM: Invalid parameter");
             }
         }
     }
@@ -225,7 +225,7 @@ contract AuthereumDelegateKeyModule is ReentrancyGuard {
 
         // Minimum data length is 4 bytes for the function selector + 32 bytes per parameter
         uint256 minDataLength = _parameterCount.mul(32).add(4);
-        require(_data.length >= minDataLength, "DKM: Transaction data is too short");
+        require(_data.length >= minDataLength, "ADKM: Transaction data is too short");
 
         bytes4 functionSelector = _data.toBytes4(0);
         bytes32[] memory parameters = new bytes32[](_parameterCount);
@@ -235,6 +235,20 @@ contract AuthereumDelegateKeyModule is ReentrancyGuard {
         }
 
         return (functionSelector, parameters);
+    }
+
+    function _getExecutionGasLimit() private returns (uint256) {
+        // We need to factor in the max possible cost of all calls in the chain in order to avoid an implicit reversion
+        // 63/64 accounts for EIP 150
+        // 9700 accounts for the max possible cost of the call to the proxy contract and the call to the logic contract
+        // 34700 accounts for the max possible cost of the call from the logic contract to the user's desired address
+        // 25000 accounts for the cost of the logic surrounding all calls
+        // NOTE: This last value is intentionally high as it is also used as a buffer against potential EVM changes
+        uint256 _gasLimit = ((gasleft() * 63 / 64 - 9700) * 63 / 64 - 9700) * 63 / 64 - 34700 - 25000;
+
+        // It is cheaper to check for an underflow this way than it is to use SafeMath
+        require(gasleft() > _gasLimit, "ADKM: Subtraction underflow");
+        return _gasLimit;
     }
 
     function _executeTransaction(

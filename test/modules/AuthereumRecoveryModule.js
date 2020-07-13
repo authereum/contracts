@@ -44,7 +44,8 @@ contract('AuthereumRecoveryModule', function (accounts) {
 
     // Create Logic Contracts
     authereumAccountLogicContract = await ArtifactAuthereumAccount.new()
-    authereumProxyFactoryLogicContract = await ArtifactAuthereumProxyFactory.new(authereumAccountLogicContract.address, authereumEnsManager.address)
+    const _proxyInitCode = await utils.calculateProxyBytecodeAndConstructor(authereumAccountLogicContract.address)
+    authereumProxyFactoryLogicContract = await ArtifactAuthereumProxyFactory.new(_proxyInitCode, authereumEnsManager.address)
 
     // Set up Authereum ENS Manager defaults
     await utils.setAuthereumENSManagerDefaults(authereumEnsManager, AUTHEREUM_OWNER, authereumProxyFactoryLogicContract.address, constants.AUTHEREUM_PROXY_RUNTIME_CODE_HASH)
@@ -88,7 +89,17 @@ contract('AuthereumRecoveryModule', function (accounts) {
     context('Happy path', () => {
       it('Should return the name of the contract', async () => {
         const _name = await authereumRecoveryModule.name.call()
-        assert.equal(_name, constants.CONTRACT_NAMES.RECOVERY_MODULE)
+        assert.equal(_name, constants.CONTRACTS.AUTHEREUM_RECOVERY_MODULE.NAME)
+      })
+    })
+  })
+  describe('version', () => {
+    context('Happy path', () => {
+      it('Should return the version of the contract', async () => {
+        const _version = await authereumRecoveryModule.version.call()
+        const _contractVersions = constants.CONTRACTS.AUTHEREUM_RECOVERY_MODULE.VERSIONS
+        const _latestVersionIndex = _contractVersions.length - 1
+        assert.equal(_version, _contractVersions[_latestVersionIndex])
       })
     })
   })
@@ -163,7 +174,7 @@ contract('AuthereumRecoveryModule', function (accounts) {
 
         await expectRevert(
           addRecoveryAccount(RECOVERY_ADDRESS),
-          constants.REVERT_MSG.RM_RECOVERY_MODULE_NOT_REGISTERED
+          constants.REVERT_MSG.ARM_RECOVERY_MODULE_NOT_REGISTERED
         )
 
         await expectInactiveRecoveryAccount(RECOVERY_ADDRESS)
@@ -176,7 +187,7 @@ contract('AuthereumRecoveryModule', function (accounts) {
 
         await expectRevert(
           addRecoveryAccount(RECOVERY_ADDRESS),
-          constants.REVERT_MSG.RM_RECOVERY_ADDRESS_ALREADY_ADDED
+          constants.REVERT_MSG.ARM_RECOVERY_ADDRESS_ALREADY_ADDED
         )
       })
 
@@ -187,7 +198,7 @@ contract('AuthereumRecoveryModule', function (accounts) {
 
         await expectRevert(
           addRecoveryAccount(constants.ZERO_ADDRESS),
-          constants.REVERT_MSG.RM_RECOVERY_ADDRESS_CANNOT_BE_ZERO
+          constants.REVERT_MSG.ARM_RECOVERY_ADDRESS_CANNOT_BE_ZERO
         )
       })
 
@@ -198,7 +209,7 @@ contract('AuthereumRecoveryModule', function (accounts) {
 
         await expectRevert(
           addRecoveryAccount(accountContract.address),
-          constants.REVERT_MSG.RM_RECOVERY_ADDRESS_CANNOT_BE_SELF
+          constants.REVERT_MSG.ARM_RECOVERY_ADDRESS_CANNOT_BE_SELF
         )
       })
     })
@@ -242,7 +253,7 @@ contract('AuthereumRecoveryModule', function (accounts) {
 
         await expectRevert(
           authereumRecoveryModule.removeRecoveryAccount(RECOVERY_ADDRESS, { from: ATTACKER_ADDRESS }),
-          constants.REVERT_MSG.RM_RECOVERY_ADDRESS_ALREADY_INACTIVE
+          constants.REVERT_MSG.ARM_RECOVERY_ADDRESS_ALREADY_INACTIVE
         )
 
         await expectActiveRecoveryAccount(RECOVERY_ADDRESS)
@@ -253,7 +264,7 @@ contract('AuthereumRecoveryModule', function (accounts) {
 
         await expectRevert(
           removeRecoveryAccount(RECOVERY_ADDRESS),
-          constants.REVERT_MSG.RM_RECOVERY_ADDRESS_ALREADY_INACTIVE
+          constants.REVERT_MSG.ARM_RECOVERY_ADDRESS_ALREADY_INACTIVE
         )
       })
     })
@@ -297,7 +308,7 @@ contract('AuthereumRecoveryModule', function (accounts) {
           authereumRecoveryModule.startRecovery(
             accountContract.address, NEW_AUTH_KEY, { from: ATTACKER_ADDRESS }
           ),
-          constants.REVERT_MSG.RM_INACTIVE_RECOVERY_ACCOUNT
+          constants.REVERT_MSG.ARM_INACTIVE_RECOVERY_ACCOUNT
         )
 
         await expectNoRecoveryAttempt(RECOVERY_ADDRESS)
@@ -316,7 +327,7 @@ contract('AuthereumRecoveryModule', function (accounts) {
           authereumRecoveryModule.startRecovery(
             accountContract.address, NEW_AUTH_KEY, { from: RECOVERY_ADDRESS }
           ),
-          constants.REVERT_MSG.RM_RECOVERY_ALREADY_IN_PROCESS
+          constants.REVERT_MSG.ARM_RECOVERY_ALREADY_IN_PROCESS
         )
       })
 
@@ -331,7 +342,7 @@ contract('AuthereumRecoveryModule', function (accounts) {
             constants.ZERO_ADDRESS,
             { from: RECOVERY_ADDRESS }
           ),
-          constants.REVERT_MSG.RM_AUTH_KEY_CANNOT_BE_ZERO
+          constants.REVERT_MSG.ARM_AUTH_KEY_CANNOT_BE_ZERO
         )
 
         await expectNoRecoveryAttempt(RECOVERY_ADDRESS)
@@ -378,7 +389,7 @@ contract('AuthereumRecoveryModule', function (accounts) {
           authereumRecoveryModule.cancelRecovery(
             accountContract.address, { from: ATTACKER_ADDRESS }
           ),
-          constants.REVERT_MSG.RM_INACTIVE_RECOVERY_ACCOUNT
+          constants.REVERT_MSG.ARM_INACTIVE_RECOVERY_ACCOUNT
         )
 
         await expectRecoveryAttempt(RECOVERY_ADDRESS, NEW_AUTH_KEY)
@@ -393,7 +404,7 @@ contract('AuthereumRecoveryModule', function (accounts) {
           authereumRecoveryModule.cancelRecovery(
             accountContract.address, { from: RECOVERY_ADDRESS }
           ),
-          constants.REVERT_MSG.RM_NO_RECOVERY_ATTEMPT
+          constants.REVERT_MSG.ARM_NO_RECOVERY_ATTEMPT
         )
       })
     })
@@ -450,7 +461,7 @@ contract('AuthereumRecoveryModule', function (accounts) {
           authereumRecoveryModule.completeRecovery(
             accountContract.address, RECOVERY_ADDRESS
           ),
-          constants.REVERT_MSG.RM_INACTIVE_RECOVERY_ACCOUNT
+          constants.REVERT_MSG.ARM_INACTIVE_RECOVERY_ACCOUNT
         )
 
         await expectAuthKey(NEW_AUTH_KEY, false)
@@ -470,7 +481,7 @@ contract('AuthereumRecoveryModule', function (accounts) {
           authereumRecoveryModule.completeRecovery(
             accountContract.address, RECOVERY_ADDRESS
           ),
-          constants.REVERT_MSG.RM_RECOVERY_DELAY_INCOMPLETE
+          constants.REVERT_MSG.ARM_RECOVERY_DELAY_INCOMPLETE
         )
 
         await expectAuthKey(NEW_AUTH_KEY, false)
@@ -487,7 +498,7 @@ contract('AuthereumRecoveryModule', function (accounts) {
           authereumRecoveryModule.completeRecovery(
             accountContract.address, RECOVERY_ADDRESS
           ),
-          constants.REVERT_MSG.RM_NO_RECOVERY_ATTEMPT
+          constants.REVERT_MSG.ARM_NO_RECOVERY_ATTEMPT
         )
 
         await expectAuthKey(NEW_AUTH_KEY, false)

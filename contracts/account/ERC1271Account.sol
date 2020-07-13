@@ -1,4 +1,4 @@
-pragma solidity 0.5.16;
+pragma solidity 0.5.17;
 
 import "./BaseAccount.sol";
 import "../interfaces/IERC1271.sol";

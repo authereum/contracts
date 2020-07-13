@@ -1,4 +1,4 @@
-pragma solidity 0.5.16;
+pragma solidity 0.5.17;
 pragma experimental ABIEncoderV2;
 
 import "../base/Owned.sol";
@@ -13,6 +13,9 @@ import "../interfaces/ILoginKeyTransactionValidator.sol";
 
 contract AuthereumLoginKeyValidator is Owned, ILoginKeyTransactionValidator {
 
+    string constant public name = "Authereum Login Key Validator";
+    string constant public version = "2020070100";
+
     /**
      * Events
      */
@@ -25,9 +28,6 @@ contract AuthereumLoginKeyValidator is Owned, ILoginKeyTransactionValidator {
      */
 
     mapping(address => bool) public relayerIsWhitelisted;
-
-    string constant public name = "Authereum Login Key Validator";
-    string constant public authereumLoginKeyValidatorVersion = "2020033000";
 
     /// @dev Returns true and an empty string if transactions are valid and false and an error
     ///      message if it's invalid.
@@ -52,7 +52,7 @@ contract AuthereumLoginKeyValidator is Owned, ILoginKeyTransactionValidator {
     }
 
     /// @dev Called after a transaction is executed to record information about the transaction
-    ///      for validation such as value transfered
+    ///      for validation such as value transferred
     //  @param _transactions The encoded transactions being executed
     //  @param _validationData The encoded data containing the expiration time
     //  @param _relayerAddress The address calling the account contract

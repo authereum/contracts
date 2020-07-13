@@ -1,4 +1,4 @@
-pragma solidity 0.5.16;
+pragma solidity 0.5.17;
 pragma experimental ABIEncoderV2;
 
 import "./BaseAccount.sol";
@@ -57,8 +57,14 @@ contract BaseMetaTxAccount is BaseAccount {
         // Check if any of the atomic transactions failed, if not, decode return data
         bytes[] memory _returnValues;
         if (!success) {
-            string memory _revertMsg = _getRevertMsg(res);
-            emit CallFailed(_revertMsg);
+            // If there is no prefix to the reversion reason, we know it was an OOG error
+            if (res.length == 0) {
+                revert("BMTA: Atomic call ran out of gas");
+            }
+
+            // All thrown errors will return a prefixed revert message
+            string memory _prefixedRevertMsg = _getRevertMsgFromRes(res);
+            emit CallFailed(_getStrippedRevertMsg(_prefixedRevertMsg));
         } else {
             _returnValues = abi.decode(res, (bytes[]));
         }
@@ -82,7 +88,7 @@ contract BaseMetaTxAccount is BaseAccount {
 
     /// @dev Decode and execute a meta transaction
     /// @param _transaction Transaction (to, value, gasLimit, data)
-    /// @return Succcess status and response of the call
+    /// @return Success status and response of the call
     function _decodeAndExecuteTransaction(bytes memory _transaction) internal returns (bytes memory) {
         (address _to, uint256 _value, uint256 _gasLimit, bytes memory _data) = _decodeTransactionData(_transaction);
 

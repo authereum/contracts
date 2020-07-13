@@ -88,7 +88,8 @@ contract('AuthKeyMetaTxAccount', function (accounts) {
 
     // Create Logic Contracts
     authereumAccountLogicContract = await ArtifactAuthereumAccount.new()
-    authereumProxyFactoryLogicContract = await ArtifactAuthereumProxyFactory.new(authereumAccountLogicContract.address, authereumEnsManager.address)
+    const _proxyInitCode = await utils.calculateProxyBytecodeAndConstructor(authereumAccountLogicContract.address)
+    authereumProxyFactoryLogicContract = await ArtifactAuthereumProxyFactory.new(_proxyInitCode, authereumEnsManager.address)
     authereumProxyAccountUpgradeLogicContract = await ArtifactAuthereumProxyAccountUpgrade.new()
     authereumProxyAccountUpgradeWithInitLogicContract = await ArtifactAuthereumProxyAccountUpgradeWithInit.new()
 
@@ -293,6 +294,61 @@ contract('AuthKeyMetaTxAccount', function (accounts) {
         assert.isBelow(Number(afterAccountBal), Number(beforeAccountBal))
         // Relayer starts and ends with the same value minus a small amount
         assert.closeTo(Number(afterRelayerBal), Number(beforeRelayerBal), constants.FEE_VARIANCE)
+      })
+      it('Should successfully verify and sign two token transfers (batched)', async () => {
+        await authereumProxyAccount.send(constants.THREE_ETHER, {from: AUTH_KEYS[0]})
+
+        // Create a token for use in fee payments
+        const authereumERC20 = await ArtifactTestERC20.new([authereumProxyAccount.address], DEFAULT_TOKEN_SUPPLY, DEFAULT_TOKEN_SYMBOL, DEFAULT_TOKEN_NAME, DEFAULT_TOKEN_DECIMALS)
+
+        const beforeAccountTokenBal = await authereumERC20.balanceOf(authereumProxyAccount.address)
+        const beforeToTokenBal = await authereumERC20.balanceOf(constants.ONE_ADDRESS)
+
+        const _transferData = await web3.eth.abi.encodeFunctionCall({
+          name: 'transfer',
+          type: 'function',
+          inputs: [{
+              type: 'address',
+              name: 'to'
+          },{
+              type: 'uint256',
+              name: 'value'
+          }]
+        }, [constants.ONE_ADDRESS, constants.ONE_ETHER])
+
+        let _to = authereumERC20.address
+        let _data = _transferData
+        let _value = '0'
+        let _gasLimit = gasLimit
+
+        // Convert to transactions array
+        const _encodedParameters = await utils.encodeTransactionParams(_to, _value, _gasLimit, _data)
+        let _transactions = [_encodedParameters, _encodedParameters]
+
+        // Get default signedMessageHash and signedLoginKey
+        const _transactionMessageHashSignature = await utils.getAuthKeySignedMessageHash(
+          authereumProxyAccount.address,
+          MSG_SIG,
+          constants.CHAIN_ID,
+          nonce,
+          _transactions,
+          gasPrice,
+          gasOverhead,
+          feeTokenAddress,
+          feeTokenRate
+        )
+
+        await authereumProxyAccount.executeMultipleAuthKeyMetaTransactions(
+          _transactions, gasPrice, gasOverhead, feeTokenAddress, feeTokenRate, _transactionMessageHashSignature, { from: RELAYER, gasPrice: gasPrice }
+        )
+
+        const afterAccountTokenBal = await authereumERC20.balanceOf(authereumProxyAccount.address)
+        const afterToTokenBal = await authereumERC20.balanceOf(constants.ONE_ADDRESS)
+
+        // to address gains 2 tokens
+        assert.equal(Number(afterToTokenBal) - Number(beforeToTokenBal), constants.TWO_ETHER)
+        // account loses 2 tokens
+        assert.equal(Number(beforeAccountTokenBal) - Number(afterAccountTokenBal), constants.TWO_ETHER)
       })
       it('Should successfully verify and sign two transactions (batched) and increment the contract nonce by 2', async () => {
         await authereumProxyAccount.send(constants.THREE_ETHER, {from: AUTH_KEYS[0]})
@@ -780,16 +836,11 @@ contract('AuthKeyMetaTxAccount', function (accounts) {
           feeTokenRate
         )
 
-        await authereumProxyAccount.executeMultipleAuthKeyMetaTransactions(
+        var { logs } = await authereumProxyAccount.executeMultipleAuthKeyMetaTransactions(
           _transactions, gasPrice, gasOverhead, feeTokenAddress, feeTokenRate, _transactionMessageHashSignature, { from: RELAYER, gas: gasLimit}
         )
 
-        const afterProxyBalance = await balance.current(authereumProxyAccount.address)
-        const afterRelayerBalance = await balance.current(RELAYER)
-
-        // The acccount should only lose the value they sent and a fee. The relayer should lose the fee amount.
-        assert.closeTo(Number(beforeProxyBalance) - value, Number(afterProxyBalance), 100000000000000000)
-        assert.closeTo(Number(afterRelayerBalance) - Number(beforeRelayerBalance), 230719999967232, 100000000000000)
+        expectEvent.inLogs(logs, 'CallFailed', { reason: constants.REVERT_MSG.BA_INSUFFICIENT_GAS_TRANSACTION})
       })
     })
     context('Non-Happy Path', async () => {
@@ -1052,8 +1103,8 @@ contract('AuthKeyMetaTxAccount', function (accounts) {
           expectEvent.inLogs(logs, 'CallFailed', { reason: constants.REVERT_MSG.BA_SILENT_REVERT })
         })
         it('Should not send value to the correct location due to incorrect transaction params (bytes in the addr param)', async () => {
-          // Get the proxy's balance before the transaction (to verify that it does not change)
-          const beforeProxyBalance = await balance.current(to)
+          // NOTE: This will fail because the gasLimit being sent is so high that the transaction will run out of gas
+          // during execution.
 
           // Convert to transactions array
           const _encodedParameters = await web3.eth.abi.encodeParameters(
@@ -1075,13 +1126,38 @@ contract('AuthKeyMetaTxAccount', function (accounts) {
           )
 
           // NOTE: This should succeed. Even though the data is not in the correct order, it technically still is a valid transaction
-          await authereumProxyAccount.executeMultipleAuthKeyMetaTransactions(
+          await expectRevert(
+            authereumProxyAccount.executeMultipleAuthKeyMetaTransactions(
               _transactions, gasPrice, gasOverhead, feeTokenAddress, feeTokenRate, _transactionMessageHashSignature, { from: RELAYER, gasPrice: gasPrice }
+            ),
+            constants.REVERT_MSG.BMTA_ATOMIC_CALL_OUT_OF_GAS
+          )
+        })
+        it('Should throw because the transaction\'s gasLimit parameter exceeds the top level transaction\'s gasLimit', async () => {
+          const _gasLimit = 5000000
+          const _relayerGasLimit = 4000000
+
+          // Convert to transactions array
+          const _encodedParameters = await utils.encodeTransactionParams(to, value, _gasLimit, data)
+          const _transactions = [_encodedParameters]
+          const _transactionMessageHashSignature = await utils.getAuthKeySignedMessageHash(
+            authereumProxyAccount.address,
+            MSG_SIG,
+            constants.CHAIN_ID,
+            nonce,
+            _transactions,
+            gasPrice,
+            gasOverhead,
+            feeTokenAddress,
+            feeTokenRate
           )
 
-          // Get the proxy's balance after the transaction (to verify that it does not change)
-          const afterProxyBalance = await balance.current(to)
-          assert.equal(Number(beforeProxyBalance), Number(afterProxyBalance))
+          // NOTE: This should succeed. Even though the data is not in the correct order, it technically still is a valid transaction
+          var { logs } = await authereumProxyAccount.executeMultipleAuthKeyMetaTransactions(
+              _transactions, gasPrice, gasOverhead, feeTokenAddress, feeTokenRate, _transactionMessageHashSignature, { from: RELAYER, gas: _relayerGasLimit, gasPrice: gasPrice }
+            )
+
+          expectEvent.inLogs(logs, 'CallFailed', { reason: constants.REVERT_MSG.BA_INSUFFICIENT_GAS_TRANSACTION })
         })
         it('Should throw and cost the relayer if the account does not send a large enough gasLimit', async () => {
           const _relayerGasLimit = 5000

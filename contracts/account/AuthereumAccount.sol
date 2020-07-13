@@ -1,4 +1,4 @@
-pragma solidity 0.5.16;
+pragma solidity 0.5.17;
 pragma experimental ABIEncoderV2;
 
 import "./BaseAccount.sol";
@@ -24,5 +24,5 @@ contract AuthereumAccount is
     AccountUpgradeability
 {
     string constant public name = "Authereum Account";
-    string constant public authereumVersion = "2020070100";
+    string constant public version = "2020070100";
 }

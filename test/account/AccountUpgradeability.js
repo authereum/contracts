@@ -2,7 +2,6 @@ const utils = require('../utils/utils')
 const constants = require('../utils/constants.js')
 const timeUtils = require('../utils/time.js')
 
-const { setENSDefaults, setAuthereumENSManagerDefaults, buildCreate2Address, getSaltHash } = require('../utils/utils')
 const { expectEvent, expectRevert } = require('@openzeppelin/test-helpers')
 
 const ArtifactBadTransaction = artifacts.require('BadTransaction')
@@ -83,7 +82,8 @@ contract('AccountUpgradeability', function (accounts) {
 
     // Create Logic Contracts
     authereumAccountLogicContract = await ArtifactAuthereumAccount.new()
-    authereumProxyFactoryLogicContract = await ArtifactAuthereumProxyFactory.new(authereumAccountLogicContract.address, authereumEnsManager.address)
+    const _proxyInitCode = await utils.calculateProxyBytecodeAndConstructor(authereumAccountLogicContract.address)
+    authereumProxyFactoryLogicContract = await ArtifactAuthereumProxyFactory.new(_proxyInitCode, authereumEnsManager.address)
     authereumProxyAccountUpgradeLogicContract = await ArtifactAuthereumProxyAccountUpgrade.new()
     authereumProxyAccountUpgradeWithInitLogicContract = await ArtifactAuthereumProxyAccountUpgradeWithInit.new()
 
@@ -173,6 +173,14 @@ contract('AccountUpgradeability', function (accounts) {
   //  Tests  //
   //********//
 
+  describe('implementation', () => {
+    context('Happy Path', async () => {
+      it('Should confirm the implementation address after the creation of a proxy', async () => {
+        const implementationAddress = await authereumProxyAccount.implementation()
+        assert.equal(authereumAccountLogicContract.address, implementationAddress)
+      })
+    })
+  })
   describe('upgradeToAndCall', () => {
     context('Happy Path', async () => {
       it('Should upgrade a proxy\'s logic address (w/o init)', async () => {
@@ -216,8 +224,8 @@ contract('AccountUpgradeability', function (accounts) {
 
         // Check that this does not affect the proxy's ability to interact with the logic addr it set
         // Check the proxy's logic address
-        const proxyImplementationAddress = await authereumProxy.implementation()
-        assert.equal(authereumProxyAccountUpgradeLogicContract.address, proxyImplementationAddress)
+        const _proxyImplementationAddress = await utils.getImplementationAddressFromStorageSlot(authereumProxy.address)
+        assert.equal(authereumProxyAccountUpgradeLogicContract.address, _proxyImplementationAddress)
 
         // Check that the proxy can call a function on the expected logic address
         const chainId = await authereumProxyAccount.getChainId()
@@ -276,8 +284,8 @@ contract('AccountUpgradeability', function (accounts) {
 
         // Check that this does not affect the proxy's ability to interact with the logic addr it set
         // Check the proxy's logic address
-        const proxyImplementationAddress = await authereumProxy.implementation()
-        assert.equal(authereumProxyAccountUpgradeWithInitLogicContract.address, proxyImplementationAddress)
+        const _proxyImplementationAddress = await utils.getImplementationAddressFromStorageSlot(authereumProxy.address)
+        assert.equal(authereumProxyAccountUpgradeWithInitLogicContract.address, _proxyImplementationAddress)
 
         // Check that the proxy can call a function on the expected logic address
         const chainId = await authereumProxyAccount.getChainId()

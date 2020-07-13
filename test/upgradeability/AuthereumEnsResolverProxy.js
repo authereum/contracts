@@ -57,7 +57,8 @@ contract('AuthereumEnsResolverProxy', function (accounts) {
     // Create Logic Contracts
     authereumEnsResolverLogicContract = await ArtifactAuthereumEnsResolver.new(ensRegistry.address, accounts[0])
     authereumAccountLogicContract = await ArtifactAuthereumAccount.new()
-    authereumProxyFactoryLogicContract = await ArtifactAuthereumProxyFactory.new(authereumAccountLogicContract.address, authereumEnsManager.address)
+    const _proxyInitCode = await utils.calculateProxyBytecodeAndConstructor(authereumAccountLogicContract.address)
+    authereumProxyFactoryLogicContract = await ArtifactAuthereumProxyFactory.new(_proxyInitCode, authereumEnsManager.address)
     authereumProxyAccountUpgradeLogicContract = await ArtifactAuthereumProxyAccountUpgrade.new()
     authereumProxyAccountUpgradeWithInitLogicContract = await ArtifactAuthereumProxyAccountUpgradeWithInit.new()
 
@@ -108,14 +109,6 @@ contract('AuthereumEnsResolverProxy', function (accounts) {
   //  Tests  //
   //********//
 
-  describe('name', () => {
-    context('Happy path', () => {
-      it('Should return the name of the contract', async () => {
-        const _name = await authereumEnsResolverProxy.name.call()
-        assert.equal(_name, constants.CONTRACT_NAMES.AUTHEREUM_ENS_RESOLVER_PROXY)
-      })
-    })
-  })
   describe('fallback', () => {
     context('Non-Happy Path', async () => {
       it.skip('Should allow an arbitrary person to call the fallback but not change any state on behalf of the proxy owner', async () => {

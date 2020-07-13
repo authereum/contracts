@@ -1,4 +1,4 @@
-pragma solidity 0.5.16;
+pragma solidity 0.5.17;
 pragma experimental ABIEncoderV2;
 
 import "../libs/SafeMath.sol";
@@ -19,6 +19,9 @@ import "../account/AuthereumAccount.sol";
 
 contract AuthereumRecoveryModule {
     using SafeMath for uint256;
+
+    string constant public name = "Authereum Recovery Module";
+    string constant public version = "2020070100";
 
     /**
      * Events
@@ -72,20 +75,17 @@ contract AuthereumRecoveryModule {
     mapping(address => mapping(address => RecoveryAccount)) public recoveryAccounts;
     mapping(address => mapping(address => RecoveryAttempt)) public recoveryAttempts;
 
-    string constant public name = "Authereum Recovery Module";
-    string constant public authereumRecoveryModuleVersion = "2020033000";
-
     /**
      * Modifiers
      */
 
     modifier isRecoveryAddress(address _accountContract, address _recoveryAddress) {
-        require(recoveryAccounts[_accountContract][_recoveryAddress].active, "RM: Inactive recovery account");
+        require(recoveryAccounts[_accountContract][_recoveryAddress].active, "ARM: Inactive recovery account");
         _;
     }
 
     modifier onlyWhenRegisteredModule {
-        require(AuthereumAccount(msg.sender).authKeys(address(this)), "RM: Recovery module not registered to account");
+        require(AuthereumAccount(msg.sender).authKeys(address(this)), "ARM: Recovery module not registered to account");
         _;
     }
 
@@ -98,9 +98,9 @@ contract AuthereumRecoveryModule {
     /// @param _recoveryAddress The address that can recover the account
     /// @param _recoveryDelay The delay required between starting and completing recovery
     function addRecoveryAccount(address _recoveryAddress, uint256 _recoveryDelay) external onlyWhenRegisteredModule {
-        require(_recoveryAddress != address(0), "RM: Recovery address cannot be address(0)");
-        require(_recoveryAddress != msg.sender, "RM: Cannot add self as recovery account");
-        require(recoveryAccounts[msg.sender][_recoveryAddress].active == false, "RM: Recovery address has already been added");
+        require(_recoveryAddress != address(0), "ARM: Recovery address cannot be address(0)");
+        require(_recoveryAddress != msg.sender, "ARM: Cannot add self as recovery account");
+        require(recoveryAccounts[msg.sender][_recoveryAddress].active == false, "ARM: Recovery address has already been added");
         recoveryAccounts[msg.sender][_recoveryAddress] = RecoveryAccount(true, _recoveryDelay);
 
         emit RecoveryAddressAdded(msg.sender, _recoveryAddress, _recoveryDelay);
@@ -110,7 +110,7 @@ contract AuthereumRecoveryModule {
     /// @dev Called by the Authereum account
     /// @param _recoveryAddress The address that can recover the account
     function removeRecoveryAccount(address _recoveryAddress) external {
-        require(recoveryAccounts[msg.sender][_recoveryAddress].active == true, "RM: Recovery address is already inactive");
+        require(recoveryAccounts[msg.sender][_recoveryAddress].active == true, "ARM: Recovery address is already inactive");
         delete recoveryAccounts[msg.sender][_recoveryAddress];
 
         RecoveryAttempt storage recoveryAttempt = recoveryAttempts[msg.sender][_recoveryAddress];
@@ -127,8 +127,8 @@ contract AuthereumRecoveryModule {
     /// @param _accountContract Address of the Authereum account being recovered
     /// @param _newAuthKey The address of the Auth Key being added to the Authereum account
     function startRecovery(address _accountContract, address _newAuthKey) external isRecoveryAddress(_accountContract, msg.sender) {
-        require(recoveryAttempts[_accountContract][msg.sender].startTime == 0, "RM: Recovery is already in process");
-        require(_newAuthKey != address(0), "RM: Auth Key cannot be address(0)");
+        require(recoveryAttempts[_accountContract][msg.sender].startTime == 0, "ARM: Recovery is already in process");
+        require(_newAuthKey != address(0), "ARM: Auth Key cannot be address(0)");
 
         recoveryAttempts[_accountContract][msg.sender] = RecoveryAttempt(now, _newAuthKey);
 
@@ -142,7 +142,7 @@ contract AuthereumRecoveryModule {
     function cancelRecovery(address _accountContract) external isRecoveryAddress(_accountContract, msg.sender) {
         RecoveryAttempt memory recoveryAttempt = recoveryAttempts[_accountContract][msg.sender];
 
-        require(recoveryAttempt.startTime != 0, "RM: Recovery attempt does not exist");
+        require(recoveryAttempt.startTime != 0, "ARM: Recovery attempt does not exist");
 
         delete recoveryAttempts[_accountContract][msg.sender];
 
@@ -157,8 +157,8 @@ contract AuthereumRecoveryModule {
         RecoveryAccount memory recoveryAccount = recoveryAccounts[_accountContract][_recoveryAddress];
         RecoveryAttempt memory recoveryAttempt = recoveryAttempts[_accountContract][_recoveryAddress];
 
-        require(recoveryAttempt.startTime != 0, "RM: Recovery attempt does not exist");
-        require(recoveryAttempt.startTime.add(recoveryAccount.delay) < now, "RM: Recovery attempt delay period has not completed");
+        require(recoveryAttempt.startTime != 0, "ARM: Recovery attempt does not exist");
+        require(recoveryAttempt.startTime.add(recoveryAccount.delay) < now, "ARM: Recovery attempt delay period has not completed");
 
         delete recoveryAttempts[_accountContract][_recoveryAddress];
         AuthereumAccount(_accountContract).addAuthKey(recoveryAttempt.newAuthKey);

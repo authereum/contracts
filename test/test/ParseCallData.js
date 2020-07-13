@@ -189,7 +189,7 @@ contract('ParseCallData', function (accounts) {
         }, [_addr, _num])
 
       _data = _data.substring(0, _data.length - 2)
-      await expectRevert(parseCallDataInstance.callParseCalldata(_data, _parameterCount), constants.REVERT_MSG.DKM_TRANSACTION_DATA_TOO_SHORT)
+      await expectRevert(parseCallDataInstance.callParseCalldata(_data, _parameterCount), constants.REVERT_MSG.ADKM_TRANSACTION_DATA_TOO_SHORT)
     })
     it('Should allow data to be too long (1 byte)', async () => {
       const _parameterCount = 2

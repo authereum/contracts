@@ -218,13 +218,14 @@ The Authereum proxy's should all share the same bytecode from 'Compiler version 
 
 ## Changelog
 
-### Authereum Accounts
+### Authereum Account
 
-#### AuthereumAccountv2020070100
+#### 2020070100
 
   This update was a routine update to prepare for another audit by G0 Group.
 
   **General**
+  * Update contract to Solidity 0.5.17
   * Normalize `loginKeyRestrictionData` to `loginKeyRestrictionsData`
   * Fix spelling issues
   * Remove 0 fee payments (don't transfer 0 tokens/ETH)
@@ -232,25 +233,27 @@ The Authereum proxy's should all share the same bytecode from 'Compiler version 
   * Change all instances of `authereum.eth` to `auth.eth`
   * Update to Truffle `istanbul` compiler
   * Remove unnecessary return of the message hash from `_atomicExecuteMultipleMetaTransactions`
-  * Add RecoveryModule and DelegateKeyModule
   * Add ERC777 support
   * Allow for limited sending of transactions from a login key to an auth key or self
   * Disallow auth keys from being `self`
   * Remove unused `onlyAuthKeySender` modifier
   * Add pre- and post-hooks to login key transactions
   * Add `name` variable to contracts
+  * Convert `authereumVersion` to `version`
+  * Add `implementation()`
+  * Add `implementation()` and `upgradeToAndCall()` to `IAuthereumAccount.sol`
 
   **Tests**
   * Add tests
 
-#### AuthereumAccountv2020021700
+#### 2020021700
 
   This update was in response to samczsun's disclosure:
 
   **Bugfixes**
   * Validate both auth key and login key tx prior to execution
 
-#### AuthereumAccountv2020020200
+#### 2020020200
 
   This update was in response to our Quantstamp audit.
 
@@ -261,18 +264,18 @@ The Authereum proxy's should all share the same bytecode from 'Compiler version 
   **Bugfixes**
   * Return the appropriate data from `executeMultipleMetaTransactions()`
 
-#### AuthereumAccountv2020010900
+#### 2020010900
 
   **Bugfixes**
   * Fee token rate calculation
 
-#### AuthereumAccountv2019122000
+#### 2019122000
 
   **General**
   * Major refactor
   * Introduce fee toke
 
-#### AuthereumAccountv2019111500
+#### 2019111500
 
   **General**
   * Architecture upgrade
@@ -281,11 +284,94 @@ The Authereum proxy's should all share the same bytecode from 'Compiler version 
   **Bugfixes**
   * General bug fixes
 
-#### AuthereumAccountv2019102500
+#### 2019102500
 
   **General**
   * Original contract
 
+### Authereum Proxy Factory
+
+#### 2020070100
+
+  **General**
+  * Update contract to Solidity 0.5.17
+  * Add `name`
+  * Add `version`
+  * Pass `initCode` directly into the constructor
+  * Hash `initData` in the `create2` salt to validate auth key
+
+#### 2019111500
+
+  **General**
+  * Add `initCode` setter and change event
+  * Add `authereumEnsManager` setter and change event
+
+#### 2019102500
+
+  **General**
+  * Original contract
+
+### Authereum ENS Manager
+
+#### 2020070100
+
+  **General**
+  * Update contract to Solidity 0.5.17
+  * Add `name`
+  * Add `version`
+  * Update internal variable from `name` to `_name`
+
+#### 2019111500
+
+  **General**
+  * Add ability to change rootnode text
+  * Add ability to change rootnode contenthash
+
+#### 2019102500
+
+  **General**
+  * Original contract
+
+### Authereum ENS Resolver
+
+#### 2020070100
+
+  **General**
+  * Update contract to Solidity 0.5.17
+  * Add `version`
+
+#### 2019111500
+
+  **General**
+  * Update contract to Solidity 0.5.12
+  * Add `text` and `contenthash` to interface
+  * Add `text` and `contenthash` as setter and getter
+
+#### 2019102500
+
+  **General**
+  * Original contract
+
+### Authereum Delegate Key Module
+
+#### 2020070100
+
+  **General**
+  * Original contract
+
+### Authereum Recovery Module
+
+#### 2020070100
+
+  **General**
+  * Original contract
+
+### Authereum Login Key Validator
+
+#### 2020070100
+
+  **General**
+  * Original contract
 
 ## FAQ
 
@@ -346,6 +432,10 @@ or not invoke an inherited contract's constructor correctly
 * Why does my deployed address not match my calculated address?
   * It is probably the bytecode
     * One thing to look at is `src/constants`. If you updated the compiler, this will need changed, along with the code that uses that data elsewhere.
+
+* Why do I keep getting "Error: Returned error: the tx doesn't have the correct nonce. account has nonce of: 1 tx has nonce of: 0" when I run tests
+  * This is due to a snapshot issue we have. Because we must deploy the 1820 contract with a specific nonce, this error may occur if things get out of order (transactions fail un-gracefully, stopping tests between snapshots, etc.)
+    * To resolve this, simply restart ganache.
 
 # License
 
