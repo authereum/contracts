@@ -1,8 +1,8 @@
-pragma solidity 0.5.16;
+pragma solidity 0.5.17;
 
 import "./AuthereumEnsResolver.sol";
 import "../base/Owned.sol";
-import "../utils/strings.sol";
+import "../libs/strings.sol";
 
 /**
  * @title AuthereumEnsManager
@@ -15,7 +15,8 @@ import "../utils/strings.sol";
 contract AuthereumEnsManager is Owned {
     using strings for *;
 
-    string constant public authereumEnsManagerVersion = "2020020200";
+    string constant public name = "Authereum ENS Manager";
+    string constant public version = "2020070100";
 
     // namehash('addr.reverse')
     bytes32 constant public ADDR_REVERSE_NODE = 0x91d1777781884d03a6757a803996e38de2a42967fb37eeaca72729271025a9e2;
@@ -49,10 +50,10 @@ contract AuthereumEnsManager is Owned {
     }
 
     /// @dev Constructor that sets the ENS root name and root node to manage
-    /// @param _rootName The root name (e.g. authereum.eth)
-    /// @param _rootNode The node of the root name (e.g. namehash(authereum.eth))
+    /// @param _rootName The root name (e.g. auth.eth)
+    /// @param _rootNode The node of the root name (e.g. namehash(auth.eth))
     /// @param _ensRegistry Public ENS Registry address
-    /// @param _authereumEnsResolver Custom Autheruem ENS Resolver address
+    /// @param _authereumEnsResolver Custom Authereum ENS Resolver address
     constructor(
         string memory _rootName,
         bytes32 _rootNode,
@@ -134,7 +135,7 @@ contract AuthereumEnsManager is Owned {
      */
 
     /// @dev Lets the owner change the address of the Authereum ENS resolver contract
-    /// @param _authereumEnsResolver The address of the Authereun ENS resolver contract
+    /// @param _authereumEnsResolver The address of the Authereum ENS resolver contract
     function changeAuthereumEnsResolver(address _authereumEnsResolver) external onlyOwner {
         require(_authereumEnsResolver != address(0), "AEM: Address must not be null");
         authereumEnsResolver = _authereumEnsResolver;
@@ -179,11 +180,11 @@ contract AuthereumEnsManager is Owned {
         strings.slice[] memory parts = new strings.slice[](2);
         parts[0] = _label.toSlice();
         parts[1] = rootName.toSlice();
-        string memory name = ".".toSlice().join(parts);
+        string memory _name = ".".toSlice().join(parts);
         bytes32 reverseNode = EnsReverseRegistrar(getEnsReverseRegistrar()).node(_owner);
-        AuthereumEnsResolver(authereumEnsResolver).setName(reverseNode, name);
+        AuthereumEnsResolver(authereumEnsResolver).setName(reverseNode, _name);
 
-        emit Registered(_owner, name);
+        emit Registered(_owner, _name);
     }
 
     /**

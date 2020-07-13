@@ -1,5 +1,5 @@
 
-pragma solidity ^0.5.16;
+pragma solidity 0.5.17;
 
 /**
  *  Most of this contract is from openzeppelin-solidity 2.4.0

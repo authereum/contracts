@@ -1,4 +1,4 @@
-pragma solidity 0.5.16;
+pragma solidity 0.5.17;
 pragma experimental ABIEncoderV2;
 
 import "../base/Owned.sol";
@@ -14,7 +14,10 @@ contract AuthereumEnsManager {
  */
 
 contract AuthereumProxyFactory is Owned {
-    string constant public authereumProxyFactoryVersion = "2019111500";
+
+    string constant public name = "Authereum Proxy Factory";
+    string constant public version = "2020070100";
+
     bytes private initCode;
     address private authereumEnsManagerAddress;
     
@@ -24,10 +27,10 @@ contract AuthereumProxyFactory is Owned {
     event AuthereumEnsManagerChanged(address indexed authereumEnsManager);
 
     /// @dev Constructor
-    /// @param _implementation Address of the Authereum implementation
+    /// @param _initCode Init code of the AuthereumProxy and constructor
     /// @param _authereumEnsManagerAddress Address for the Authereum ENS Manager contract
-    constructor(address _implementation, address _authereumEnsManagerAddress) public {
-        initCode = abi.encodePacked(type(AuthereumProxy).creationCode, uint256(_implementation));
+    constructor(bytes memory _initCode, address _authereumEnsManagerAddress) public {
+        initCode = _initCode;
         authereumEnsManagerAddress =  _authereumEnsManagerAddress;
         authereumEnsManager = AuthereumEnsManager(authereumEnsManagerAddress);
         emit InitCodeChanged(initCode);
@@ -39,7 +42,7 @@ contract AuthereumProxyFactory is Owned {
      */
 
     /// @dev Setter for the proxy initCode
-    /// @param _initCode Init code off the AuthereumProxy and constructor
+    /// @param _initCode Init code of the AuthereumProxy and constructor
     function setInitCode(bytes memory _initCode) public onlyOwner {
         initCode = _initCode;
         emit InitCodeChanged(initCode);
@@ -87,7 +90,7 @@ contract AuthereumProxyFactory is Owned {
     {
         address payable addr;
         bytes memory _initCode = initCode;
-        bytes32 salt = _getSalt(_salt, msg.sender);
+        bytes32 salt = _getSalt(_salt, _initData);
 
         // Create proxy
         assembly {
@@ -111,10 +114,11 @@ contract AuthereumProxyFactory is Owned {
         return AuthereumProxy(addr);
     }
 
-    /// @dev Generate a salt out of a uint256 value and the sender
+    /// @dev Generate a salt out of a uint256 value and the init data
     /// @param _salt A uint256 value to add randomness to the account creation
-    /// @param _sender Sender of the transaction
-    function _getSalt(uint256 _salt, address _sender) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(_salt, _sender)); 
+    /// @param _initData Array of initialize data
+    function _getSalt(uint256 _salt, bytes[] memory _initData) internal pure returns (bytes32) {
+        bytes32 _initDataHash = keccak256(abi.encode(_initData));
+        return keccak256(abi.encodePacked(_salt, _initDataHash)); 
     }
 }

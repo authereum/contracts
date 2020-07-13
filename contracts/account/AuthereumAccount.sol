@@ -1,4 +1,4 @@
-pragma solidity 0.5.16;
+pragma solidity 0.5.17;
 pragma experimental ABIEncoderV2;
 
 import "./BaseAccount.sol";
@@ -23,5 +23,6 @@ contract AuthereumAccount is
     AuthKeyMetaTxAccount,
     AccountUpgradeability
 {
-    string constant public authereumVersion = "2020021700";
+    string constant public name = "Authereum Account";
+    string constant public version = "2020070100";
 }

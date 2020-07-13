@@ -2,7 +2,7 @@
  *Submitted for verification at Etherscan.io on 2018-11-15
 */
 
-pragma solidity 0.5.16;
+pragma solidity 0.5.17;
 
 interface ENS {
 

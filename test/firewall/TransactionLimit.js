@@ -30,7 +30,7 @@
 //   let expectedSalt
 //   let expectedCreationCodeHash
 //   let nonce
-//   let destination
+//   let to
 //   let value
 //   let data
 //   let gasPrice
@@ -60,7 +60,7 @@
 
 //     // Create Logic Contracts
 //     authereumAccountLogicContract = await ArtifactAuthereumAccount.new()
-//     authereumProxyFactoryLogicContract = await ArtifactAuthereumProxyFactory.new(authereumAccountLogicContract.address, authereumEnsManager.address)
+//     authereumProxyFactoryLogicContract = await ArtifactAuthereumProxyFactory.new(_proxyInitCode, authereumEnsManager.address)
 //     authereumProxyAccountUpgradeLogicContract = await ArtifactAuthereumProxyAccountUpgrade.new()
 //     authereumProxyAccountUpgradeWithInitLogicContract = await ArtifactAuthereumProxyAccountUpgradeWithInit.new()
 
@@ -90,7 +90,7 @@
 
 //     // Transaction parameters
 //     nonce = 0
-//     destination = RECEIVERS[0]
+//     to = RECEIVERS[0]
 //     value = constants.ONE_ETHER
 //     data = '0x00'
 //   })

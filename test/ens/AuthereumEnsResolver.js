@@ -85,21 +85,40 @@ contract('AuthereumEnsResolver', function (accounts) {
 
     // Set up Authereum ENS Manager defaults
     await utils.setAuthereumENSManagerDefaults(authereumEnsManager, AUTHEREUM_OWNER, MOCK_FACTORY_ADDRESS, mockBytes)
-  });
+  })
 
   // Take snapshot before each test and revert after each test
   beforeEach(async() => {
-    snapshotId = await timeUtils.takeSnapshot();
-  });
+    snapshotId = await timeUtils.takeSnapshot()
+  })
 
   afterEach(async() => {
-    await timeUtils.revertSnapshot(snapshotId.result);
-  });
+    await timeUtils.revertSnapshot(snapshotId.result)
+  })
 
   //**********//
   //  Tests  //
   //********//
 
+  describe('name', () => {
+    context('Happy path', () => {
+      it('Should return the name of the contract', async () => {
+        // This contract does not have a `name` variable that defines the
+        // contract name because it also includes a name() variable
+        // for the ENS logic.
+      })
+    })
+  })
+  describe('version', () => {
+    context('Happy path', () => {
+      it('Should return the version of the contract', async () => {
+        const _version = await authereumEnsResolver.version.call()
+        const _contractVersions = constants.CONTRACTS.AUTHEREUM_ENS_RESOLVER.VERSIONS
+        const _latestVersionIndex = _contractVersions.length - 1
+        assert.equal(_version, _contractVersions[_latestVersionIndex])
+      })
+    })
+  })
   describe('setAddr', () => {
     context('Happy Path', async () => {
       it('Should allow a manager (multisig) to setAddr', async () => {
@@ -108,17 +127,17 @@ contract('AuthereumEnsResolver', function (accounts) {
 
         const isAddrChanged = await authereumEnsResolver.addr.call(testDotAuthereumDotEthNode)
         assert.equal(isAddrChanged, USERS[2])
-      });
-    });
+      })
+    })
     context('Non-Happy Path', async () => {
       it('Should not allow an owner to change their addr', async () => {
         await expectRevert(authereumEnsResolver.setAddr(testDotAuthereumDotEthNode, USERS[2], { from: USERS[0] }), constants.REVERT_MSG.M_MUST_BE_MANAGER)
-      });
+      })
       it('Should not allow an arbitrary user to change an addr', async () => {
         await expectRevert(authereumEnsResolver.setAddr(testDotAuthereumDotEthNode, USERS[2], { from: USERS[2] }), constants.REVERT_MSG.M_MUST_BE_MANAGER)
-      });
-    });
-  });
+      })
+    })
+  })
   describe('setName', () => {
     context('Happy Path', async () => {
       it('Should allow a manager (multisig) to setName', async () => {
@@ -127,17 +146,17 @@ contract('AuthereumEnsResolver', function (accounts) {
 
         const isNameChanged = await authereumEnsResolver.name.call(testDotAuthereumDotEthNode)
         assert.equal(isNameChanged, USERS[2])
-      });
-    });
+      })
+    })
     context('Non-Happy Path', async () => {
       it('Should not allow an owner to change their name', async () => {
         await expectRevert(authereumEnsResolver.setName(testDotAuthereumDotEthNode, USERS[2], { from: USERS[0] }), constants.REVERT_MSG.M_MUST_BE_MANAGER)
-      });
+      })
       it('Should not allow an arbitrary user to change an name', async () => {
         await expectRevert(authereumEnsResolver.setName(testDotAuthereumDotEthNode, USERS[2], { from: USERS[2] }), constants.REVERT_MSG.M_MUST_BE_MANAGER)
-      });
-    });
-  });
+      })
+    })
+  })
   describe("setText", () => {
     context('Happy Path', async () => {
       it("Should allow a manager (multisig) to setText", async () => {
@@ -146,17 +165,17 @@ contract('AuthereumEnsResolver', function (accounts) {
 
         const newTextValue = await authereumEnsResolver.text.call(testDotAuthereumDotEthNode, defaultTextKey)
         assert.equal(newTextValue, defaultTextValue)
-      });
-    });
+      })
+    })
     context('Non-Happy Path', async () => {
       it("Should not allow an owner to change their text", async () => {
         await expectRevert(authereumEnsResolver.setText(testDotAuthereumDotEthNode, defaultTextKey, defaultTextValue, { from: USERS[0] }), constants.REVERT_MSG.M_MUST_BE_MANAGER)
-      });
+      })
       it("Should not allow an arbitrary user to change a text", async () => {
         await expectRevert(authereumEnsResolver.setText(testDotAuthereumDotEthNode, defaultTextKey, defaultTextValue, { from: USERS[2] }), constants.REVERT_MSG.M_MUST_BE_MANAGER)
-      });
-    });
-  });
+      })
+    })
+  })
   describe("setContenthash", () => {
     context('Happy Path', async () => {
       it("Should allow a manager (multisig) to setContenthash", async () => {
@@ -165,41 +184,41 @@ contract('AuthereumEnsResolver', function (accounts) {
 
         const isNewContenthash = await authereumEnsResolver.contenthash.call(testDotAuthereumDotEthNode)
         assert.equal(isNewContenthash, defaultContenthashHex)
-      });
-    });
+      })
+    })
     context('Non-Happy Path', async () => {
       it("Should not allow an owner to change their contenthash", async () => {
         await expectRevert(authereumEnsResolver.setContenthash(testDotAuthereumDotEthNode, defaultContenthashBytes, { from: USERS[0] }), constants.REVERT_MSG.M_MUST_BE_MANAGER)
-      });
+      })
       it("Should not allow an arbitrary user to change a contenthash", async () => {
         await expectRevert(authereumEnsResolver.setContenthash(testDotAuthereumDotEthNode, defaultContenthashBytes, { from: USERS[2] }), constants.REVERT_MSG.M_MUST_BE_MANAGER)
-      });
-    });
-  });
+      })
+    })
+  })
   describe('supportsInterface', () => {
     context('Happy Path', async () => {
       it('Should return true for meta interface', async () => {
         const res = await authereumEnsResolver.supportsInterface(interfaceMetaId)
         assert.equal(res, true)
-      });
+      })
       it('Should return true for addr interface', async () => {
         const res = await authereumEnsResolver.supportsInterface(addrInterfaceId)
         assert.equal(res, true)
-      });
+      })
       it('Should return true for name interface', async () => {
         const res = await authereumEnsResolver.supportsInterface(nameInterfaceId)
         assert.equal(res, true)
-      });
+      })
       it("Should return true for text interface", async () => {
         const res = await authereumEnsResolver.supportsInterface(textInterfaceId)
         assert.equal(res, true)
-      });
+      })
       it("Should return true for contenthash", async () => {
         const res = await authereumEnsResolver.supportsInterface(contenthashInterfaceId)
         assert.equal(res, true)
-      });
-    });
-  });
+      })
+    })
+  })
   describe('End to end', () => {
     context('Happy Path', async () => {
       it('Should allow a manager (multisig) to setAddr, remove the manager, add another manager, and add setAddr for another account', async () => {
@@ -215,7 +234,7 @@ contract('AuthereumEnsResolver', function (accounts) {
         await expectRevert(authereumEnsResolver.setAddr(testtwoDotAuthereumDotEthNode, USERS[3], { from: AUTHEREUM_OWNER }), constants.REVERT_MSG.M_MUST_BE_MANAGER)
         var { logs } = await authereumEnsResolver.setAddr(testtwoDotAuthereumDotEthNode, USERS[3], { from: ENS_OWNER })
         expectEvent.inLogs(logs, 'AddrChanged', { node: testtwoDotAuthereumDotEthNode, a: USERS[3] })
-      });
-    });
-  });
-});
+      })
+    })
+  })
+})

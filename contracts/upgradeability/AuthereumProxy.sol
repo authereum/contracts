@@ -1,5 +1,4 @@
-pragma solidity 0.5.16;
-pragma experimental ABIEncoderV2;
+pragma solidity 0.5.17;
 
 /**
  * @title AuthereumProxy
@@ -8,11 +7,13 @@ pragma experimental ABIEncoderV2;
  */
 
 contract AuthereumProxy {
-    string constant public authereumProxyVersion = "2019102500";
+
+    // We do not include a name or a version for this contract as this
+    // is a simple proxy. Including them here would overwrite the declaration
+    // of these variables in the implementation.
 
     /// @dev Storage slot with the address of the current implementation.
-    /// @notice This is the keccak-256 hash of "eip1967.proxy.implementation" subtracted 
-    /// @notice by 1, and is validated in the constructor.
+    /// @notice This is the keccak-256 hash of "eip1967.proxy.implementation" subtracted by 1
     bytes32 internal constant IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
 
     /// @dev Set the implementation in the constructor
@@ -30,9 +31,11 @@ contract AuthereumProxy {
     /// @notice It will return to the external caller whatever the implementation returns.
     function () external payable {
         if (msg.data.length == 0) return;
-        address _implementation = implementation();
 
         assembly {
+            // Load the implementation address from the IMPLEMENTATION_SLOT
+            let impl := sload(IMPLEMENTATION_SLOT)
+
             // Copy msg.data. We take full control of memory in this inline assembly
             // block because it will not return to Solidity code. We overwrite the
             // Solidity scratch pad at memory position 0.
@@ -40,7 +43,7 @@ contract AuthereumProxy {
 
             // Call the implementation.
             // out and outsize are 0 because we don't know the size yet.
-            let result := delegatecall(gas, _implementation, 0, calldatasize, 0, 0)
+            let result := delegatecall(gas, impl, 0, calldatasize, 0, 0)
 
             // Copy the returned data.
             returndatacopy(0, 0, returndatasize)
@@ -49,15 +52,6 @@ contract AuthereumProxy {
             // delegatecall returns 0 on error.
             case 0 { revert(0, returndatasize) }
             default { return(0, returndatasize) }
-        }
-    }
-
-    /// @dev Returns the current implementation.
-    /// @return Address of the current implementation
-    function implementation() public view returns (address impl) {
-        bytes32 slot = IMPLEMENTATION_SLOT;
-        assembly {
-            impl := sload(slot)
         }
     }
 }

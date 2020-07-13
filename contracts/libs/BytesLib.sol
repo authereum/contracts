@@ -6,7 +6,7 @@
  *      The library lets you concatenate, slice and type cast bytes arrays both in memory and storage.
  */
 
-pragma solidity ^0.5.0;
+pragma solidity 0.5.17;
 
 
 library BytesLib {
@@ -376,6 +376,17 @@ library BytesLib {
         }
 
         return tempUint;
+    }
+
+    function toBytes4(bytes memory _bytes, uint _start) internal  pure returns (bytes4) {
+        require(_bytes.length >= (_start + 4));
+        bytes4 tempBytes4;
+
+        assembly {
+            tempBytes4 := mload(add(add(_bytes, 0x20), _start))
+        }
+
+        return tempBytes4;
     }
 
     function toBytes32(bytes memory _bytes, uint _start) internal  pure returns (bytes32) {

@@ -1,4 +1,4 @@
-pragma solidity 0.5.16;
+pragma solidity 0.5.17;
 pragma experimental ABIEncoderV2;
 
 import "./initializer/AccountInitialize.sol";
@@ -8,6 +8,7 @@ import "../interfaces/IERC20.sol";
 import "../libs/ECDSA.sol";
 import "../libs/SafeMath.sol";
 import "../libs/BytesLib.sol";
+import "../libs/strings.sol";
 
 /**
  * @title BaseAccount
@@ -20,23 +21,25 @@ contract BaseAccount is AccountState, AccountInitialize, TokenReceiverHooks {
     using SafeMath for uint256;
     using ECDSA for bytes32;
     using BytesLib for bytes;
+    using strings for *;
 
-    // Include a CHAIN_ID const
-    uint256 constant private CHAIN_ID = 1;
+    string constant public CALL_REVERT_PREFIX = "Authereum Call Revert: ";
 
     modifier onlySelf {
         require(msg.sender == address(this), "BA: Only self allowed");
         _;
     }
 
-    modifier onlyAuthKeySender {
-        require(_isValidAuthKey(msg.sender), "BA: Auth key is invalid");
-        _;
-    }
-
     modifier onlyAuthKeySenderOrSelf {
         require(_isValidAuthKey(msg.sender) || msg.sender == address(this), "BA: Auth key or self is invalid");
         _;
+    }
+
+    // Initialize logic contract via the constructor so it does not need to be done manually
+    // after the deployment of the logic contract. Using max uint ensures that the true
+    // lastInitializedVersion is never reached.
+    constructor () public {
+        lastInitializedVersion = uint256(-1);
     }
 
     // This is required for funds sent to this contract
@@ -49,7 +52,11 @@ contract BaseAccount is AccountState, AccountInitialize, TokenReceiverHooks {
     /// @dev Get the chain ID constant
     /// @return The chain id
     function getChainId() public pure returns (uint256) {
-        return CHAIN_ID;
+        uint256 id;
+        assembly {
+            id := chainid()
+        }
+        return id;
     }
 
     /**
@@ -60,6 +67,7 @@ contract BaseAccount is AccountState, AccountInitialize, TokenReceiverHooks {
     /// @param _authKey Address of the auth key to add
     function addAuthKey(address _authKey) external onlyAuthKeySenderOrSelf {
         require(authKeys[_authKey] == false, "BA: Auth key already added");
+        require(_authKey != address(this), "BA: Cannot add self as an auth key");
         authKeys[_authKey] = true;
         numAuthKeys += 1;
         emit AuthKeyAdded(_authKey);
@@ -88,13 +96,13 @@ contract BaseAccount is AccountState, AccountInitialize, TokenReceiverHooks {
 
     /// @dev Execute a transaction without a refund
     /// @notice This is the transaction sent from the CBA
-    /// @param _destination Destination of the transaction
+    /// @param _to To address of the transaction
     /// @param _value Value of the transaction
     /// @param _gasLimit Gas limit of the transaction
     /// @param _data Data of the transaction
     /// @return Response of the call
     function _executeTransaction(
-        address _destination,
+        address _to,
         uint256 _value,
         uint256 _gasLimit,
         bytes memory _data
@@ -102,12 +110,16 @@ contract BaseAccount is AccountState, AccountInitialize, TokenReceiverHooks {
         internal
         returns (bytes memory)
     {
-        (bool success, bytes memory res) = _destination.call.gas(_gasLimit).value(_value)(_data);
+        // Require that there will be enough gas to complete the atomic transaction
+        // We use 64/63 of the to account for EIP-150 and validate that there will be enough remaining gas
+        // We use 34700 as the max possible cost for a call
+        // NOTE: An out of gas failure after the completion of the call is the concern of the relayer
+        require(gasleft() > _gasLimit.mul(64).div(63).add(34700));
+        (bool success, bytes memory res) = _to.call.gas(_gasLimit).value(_value)(_data);
 
         // Get the revert message of the call and revert with it if the call failed
         if (!success) {
-            string memory _revertMsg = _getRevertMsg(res);
-            revert(_revertMsg);
+            revert(_getPrefixedRevertMsg(res));
         }
 
         return res;
@@ -117,10 +129,26 @@ contract BaseAccount is AccountState, AccountInitialize, TokenReceiverHooks {
     /// @notice This is needed in order to get the human-readable revert message from a call
     /// @param _res Response of the call
     /// @return Revert message string
-    function _getRevertMsg(bytes memory _res) internal pure returns (string memory) {
+    function _getRevertMsgFromRes(bytes memory _res) internal pure returns (string memory) {
         // If the _res length is less than 68, then the transaction failed silently (without a revert message)
         if (_res.length < 68) return 'BA: Transaction reverted silently';
         bytes memory revertData = _res.slice(4, _res.length - 4); // Remove the selector which is the first 4 bytes
         return abi.decode(revertData, (string)); // All that remains is the revert string
+    }
+
+    /// @dev Get the prefixed revert message from a call
+    /// @param _res Response of the call
+    /// @return Prefixed revert message string
+    function _getPrefixedRevertMsg(bytes memory _res) internal pure returns (string memory) {
+        string memory _revertMsg = _getRevertMsgFromRes(_res);
+        return string(abi.encodePacked(CALL_REVERT_PREFIX, _revertMsg));
+    }
+
+    /// @dev Strip the prefix from the prefixed revert message
+    /// @param _prefixedRevertMsg Prefixed revert message string
+    /// @return Original revert message string
+    function _getStrippedRevertMsg(string memory _prefixedRevertMsg) internal pure returns (string memory) {
+        strings.slice memory _prefixedRevertMsgSlice = _prefixedRevertMsg.toSlice();
+        return _prefixedRevertMsgSlice.beyond(CALL_REVERT_PREFIX.toSlice()).toString();
     }
 }

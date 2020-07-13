@@ -1,17 +1,24 @@
-pragma solidity 0.5.16;
-
+pragma solidity 0.5.17;
 pragma experimental ABIEncoderV2;
 
 import './IERC721Receiver.sol';
 import './IERC1155TokenReceiver.sol';
 import './IERC1271.sol';
+import './IERC1820ImplementerInterface.sol';
+import './IERC777TokensRecipient.sol';
 
-contract IAuthereumAccount is IERC1271, IERC721Receiver, IERC1155TokenReceiver {
-
+contract IAuthereumAccount is IERC1271, IERC721Receiver, IERC1155TokenReceiver, IERC1820ImplementerInterface, IERC777TokensRecipient {
     function () external payable;
-    function authereumVersion() external view returns(string memory);
+    function name() external view returns (string memory);
+    function version() external view returns (string memory);
+    function implementation() external view returns (address);
+    function lastInitializedVersion() external returns (uint256);
+    function authKeys(address _authKey) external returns (bool);
+    function nonce() external returns (uint256);
+    function numAuthKeys() external returns (uint256);
     function getChainId() external pure returns (uint256);
     function addAuthKey(address _authKey) external;
+    function upgradeToAndCall(address _newImplementation, bytes calldata _data) external;
     function removeAuthKey(address _authKey) external;
     function isValidAuthKeySignature(bytes calldata _data, bytes calldata _signature) external view returns (bytes4);
     function isValidLoginKeySignature(bytes calldata _data, bytes calldata _signature) external view returns (bytes4);

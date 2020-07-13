@@ -17,13 +17,15 @@ The Authereum contracts are necessary pieces of the Authereum ecosystem. Users o
   * [base](#base) - Base contracts used throughout the system.
   * [ens](#ens) - Custom ENS contracts. Used to give Authereum users their own *.auth.eth subdomains. The Authereum ENS Resolver is upgradeable.
   * [firewall](#firewall) - Contracts that can be used as a firewall to protect user's accounts.
+  * [modules](#modules) - Independent contracts that are added as Auth Keys to Authereum accounts for extended functionality.
   * [interfaces](#interfaces) - Interfaces used throughout the system.
   * [libs](#libs) - Libraries used throughout the system.
   * [test](#test) - Contracts used during tests. None of these contracts are ever deployed as part of the system.
   * [utils](#utils) - Utils used throughout the system.
 
 ### Top Level Design Decisions
-When a user signs up for an account on authereum.org, a proxy contract (`upgradeability/AuthereumProxy.sol`) is created for them through the Authereum proxy factory (`upgradeability/AuthereumProxyFactory.sol`). The creation of the proxy simply points the proxy to the latest Authereum account logic (implementation) address, initializes the proxy for that logic address, and gives the proxy and ENS subdomain (*.auth.eth).
+
+When a user signs up for an account on authereum.com, a proxy contract (`upgradeability/AuthereumProxy.sol`) is created for them through the Authereum proxy factory (`upgradeability/AuthereumProxyFactory.sol`). The creation of the proxy simply points the proxy to the latest Authereum account logic (implementation) address, initializes the proxy for that logic address, and gives the proxy and ENS subdomain (*.auth.eth).
 
 Each proxy is fully owned by the user who created it, and Authereum has no custody or control over it at all.
 
@@ -70,19 +72,39 @@ Upgradeability logic lives within this contract as well. In order to perform an 
 Finally, 721 and 1125 hooks are used in order to receive those types of tokens in the Authereum contracts.
 
 ### upgradeability
+
 Authereum's contracts are upgradeable. Each Authereum user owns a proxy (`AuthereumProxy.sol`) that points to their desired logic contract. This contract's sole function is to provide a fallback function that delegates calls to the proxy's logic contract. All Authereum user transactions go through this fallback.
 
 Each proxy is created by the Authereum proxy factory (`AuthereumProxyFactory.sol`). The Authereum proxy factory creates an account when `createProxy()` is called. This function creates a proxy with `create2`, initializes it, and registers a subdomain for the proxy. When a user creates an account on a later version of the Authereum contracts, they will have to iterate through each previous version's initializer. Because of this, the `createProxy()` function loops through each piece of the initialize data.
 
 The `AuthereumEnsResolverProxy.sol` is nearly identical to the `AuthereumProxy.sol` contract and is used for upgrading the Authereum ENS Resolver Proxy.
 
-### Additional Notes
+### modules
+
+The Authereum contracts support "module" contracts that can be used to introduce additional functionality to an Authereum account. A module contract is added to an Authereum account by adding its address as an Auth Key. Because modules may contain critical functionality (e.g. the RecoveryModule), Login Keys should not be able to interact with modules. To prevent this, a check in `LoginKeyMetaTxAccount.sol` will revert the transaction if a Login Key's transaction's destination is an Auth Key, which may be a module. In addition, when designing modules, care should be taken to ensure Login Key's cannot interact with a module _before_ it's added to an account as an Auth Key. Both the RecoverModule and DelegateKeyModule prevent this with the `onlyWhenRegisteredModule` modifier.
+
+## Additional Notes
+
+### Solidity Versions
+
+* The `AuthereumProxy.sol` will remain at version `0.5.16` so that the bytecode of the contract does not change. Other contracts that this contract interacts with can be upgraded.
 
 ### Known Issues
+
 * A user can break their upgradeability on the Authereum system by upgrading their account to a logic address outside of the Authereum ecosystem.
 * It is expected that a relayer will not broadcast a transaction that contains any data that would be detrimental to themselves. This includes:
   * Transactions that will revert (because of gas, bad data, or improperly signed data)
   * Transactions that contain a `feeTokenRate` that the relayer does not accept as a true rate
+* The DelegateKeyModule does not enforce that the length of `_lockedParameters` and `_lockedParameterValues` are equal to the actual number of parameters taken by the function being registered. In addition, dynamically-sized parameters cannot be locked but this is not enforced on-chain. When registering a Delegate Key, care should be taken to ensure that `_lockedParameters` and `_lockedParameterValues` equal the number of parameters in the function being registered and that none of the parameters being locked are dynamically-sized.
+
+### Invariants
+
+* An attacker cannot spend the account contract's funds, freeze the funds, or participate in account management.
+* Transactions from the account contract can only be authorized by an Auth Key or Login Key either directly or through a meta transaction.
+* Login Keys cannot participate in account management including adding and removing auth keys and upgrading the account. Anything marked as `onlySelf` or `onlyAuthKeySenderOrSelf` should not be accessible by a Login Key.
+* Login Keys should not be able to interact with the RecoveryModule or the DelegateKeyModule in a meaningful way. Modules should prevent certain interactions when the module is not registered to the account contract and the account contract should not let Login Keys invoke functionality on Auth Keys which includes any modules registered to the account contract.
+* Login Keys should only be able to interact with Auth Keys and with self in a limited capacity. Transactions from Login Keys to either an Auth Key or to self should be bounded by both data and gas values.
+* Login Keys can bypass restrictions by setting the `validationContract` to `address(0)`. It is expected that relayers who process transactions validate these restrictions off-chain, if desired.
 
 ## Config
 
@@ -99,6 +121,7 @@ LOGIC_ADDRESS=0x...
 You may also set the config by invoking the `setConfig(config)` static method.
 
 ## Versioning
+
 All the versioning in the Authereum system will use Unix timestamps. A dictionary will be kept that maps version numbers to human-readable names.
 
 Advantage of Unix Timestamp:
@@ -107,13 +130,14 @@ Advantage of Unix Timestamp:
 * Infinitely scalable
 
 Design Decisions:
-* Semantinc versioning is hard to do on file names and variables
+* Semantic versioning is hard to do on file names and variables
 * Sequential may cause issues down the road (ie renaming files/contracts to have more left padding)
 
 ## Addresses
 
 ### Mainnet
 
+* Authereum Account v2020021700 = [0x20AF9E54a3670EF6a601bcA1f1EC22b1f93CBE23](https://etherscan.io/address/0x20AF9E54a3670EF6a601bcA1f1EC22b1f93CBE23)
 * Authereum Account v2020020200 = [0x2e1723d1DFa2947f0d08D5c5D214b71deF4f951F](https://etherscan.io/address/0x2e1723d1dfa2947f0d08d5c5d214b71def4f951f)
 * Authereum Account v2020010900 = [0x79fEe076B1BcD4054DFF0B4364C26899492198dc](https://etherscan.io/address/0x79fEe076B1BcD4054DFF0B4364C26899492198dc)
 * Authereum Account v2019122000 = [0x211deB5c0a28A213FcF5976Ac22c70fF96b9004C](https://etherscan.io/address/0x211deB5c0a28A213FcF5976Ac22c70fF96b9004C)
@@ -141,6 +165,7 @@ Design Decisions:
 
 ### Kovan
 
+* Authereum Account v2020021700 = [0xD6A8E40C149aEA415DdC7a7F7743737Cd73e75a3](https://kovan.etherscan.io/address/0xD6A8E40C149aEA415DdC7a7F7743737Cd73e75a3)
 * Authereum Account v2020020200 = [0x090D1E26170e5Db316B9a86b0d61601285f463A3](https://kovan.etherscan.io/address/0x090D1E26170e5Db316B9a86b0d61601285f463A3)
 * Authereum Account v2020010900 = [0x024B110390FE302f6Ce1A2d81B9F3595B44179f4](https://kovan.etherscan.io/address/0x024B110390FE302f6Ce1A2d81B9F3595B44179f4)
 * Authereum Account v2019122000 = [0xF29a9ACE9820dB1E0C92AAE20D9e32C7ce34D6E6](https://kovan.etherscan.io/address/0xF29a9ACE9820dB1E0C92AAE20D9e32C7ce34D6E6)
@@ -149,6 +174,7 @@ Design Decisions:
 
 ### Goerli
 
+* Authereum Account v2020021700 = [0xD6A8E40C149aEA415DdC7a7F7743737Cd73e75a3](https://goerli.etherscan.io/address/0xD6A8E40C149aEA415DdC7a7F7743737Cd73e75a3)
 * Authereum Account v2020020200 = [0xc023d33c49c5BF521fd24Ea3cd43563335813b9C](https://goerli.etherscan.io/address/0xc023d33c49c5BF521fd24Ea3cd43563335813b9C)
 * Authereum Account v2020010900 = [0x7E4624F2E1C365F0f800F46c2DBfE6b62F2f4383](https://goerli.etherscan.io/address/0x7E4624F2E1C365F0f800F46c2DBfE6b62F2f4383)
 * Authereum Account v2019122000 = [0x41FeB8e32C07d83FcCe95cc03e77Fb0938006E1E](https://goerli.etherscan.io/address/0x41FeB8e32C07d83FcCe95cc03e77Fb0938006E1E)
@@ -157,6 +183,7 @@ Design Decisions:
 
 ### Rinkeby
 
+* Authereum Account v2020021700 = [0x4636e9dc617D132596634f07Ec17EeB662b1dF00](https://rinkeby.etherscan.io/address/0x4636e9dc617D132596634f07Ec17EeB662b1dF00)
 * Authereum Account v2020020200 = [0x679785fA2fB8A71206A161D1DA79Dbf762332019](https://rinkeby.etherscan.io/address/0x679785fA2fB8A71206A161D1DA79Dbf762332019)
 * Authereum Account v2020010900 = [0x7F9E8B9203cb2718F38Ac61109DC63C68986084E](https://rinkeby.etherscan.io/address/0x7F9E8B9203cb2718F38Ac61109DC63C68986084E)
 * Authereum Account v2019122000 = [0xCC44F31717aE06390Eefe6320D05bcf1d95E15CE](https://rinkeby.etherscan.io/address/0xCC44F31717aE06390Eefe6320D05bcf1d95E15CE)
@@ -165,6 +192,7 @@ Design Decisions:
 
 ### Ropsten
 
+* Authereum Account v2020021700 = [0x4636e9dc617D132596634f07Ec17EeB662b1dF00](https://ropsten.etherscan.io/address/0x4636e9dc617D132596634f07Ec17EeB662b1dF00)
 * Authereum Account v2020020200 = [0x87413A03aa58635530990fBB5ea4D0E1818D2328](https://ropsten.etherscan.io/address/0x87413A03aa58635530990fBB5ea4D0E1818D2328)
 * Authereum Account v2020010900 = [0x8A5580515fe1413e08a71D87eEB70C037972363b](https://ropsten.etherscan.io/address/0x8A5580515fe1413e08a71D87eEB70C037972363b)
 * Authereum Account v2019122000 = [0x13A56BdF8EdCB80a8995BF8B50F248429Eb4179f](https://ropsten.etherscan.io/address/0x13A56BdF8EdCB80a8995BF8B50F248429Eb4179f)
@@ -172,6 +200,9 @@ Design Decisions:
 * Authereum Account v2019102500 = [0x3D1F792509293abCb451316C9f52dDA6482604e4](https://ropsten.etherscan.io/address/0x3D1F792509293abCb451316C9f52dDA6482604e4)
 
 ## Test
+
+_Note: this requires a `ganache-cli` version with the muirGlacier compiler. Please use `ganache-cli@6.9.0` or greater._
+
 ```bash
 # In terminal 1
 npm run ganache
@@ -180,33 +211,71 @@ npm run ganache
 npm run test
 ```
 
-# Changelog
+## A note about bytecode
 
-## Authereum Accounts
+The Authereum proxy's should all share the same bytecode from 'Compiler version 0.5.12+commit.7709ece9'. All of these proxy's should have the following bytecode with the respective, padded logic contract address appended to it:
+`0x60806040526040516103753803806103758339818101604052610025919081019061006c565b60007f360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc60001b905081815550506100de565b600081519050610066816100c7565b92915050565b60006020828403121561007e57600080fd5b600061008c84828501610057565b91505092915050565b60006100a0826100a7565b9050919050565b600073ffffffffffffffffffffffffffffffffffffffff82169050919050565b6100d081610095565b81146100db57600080fd5b50565b610288806100ed6000396000f3fe6080604052600436106100295760003560e01c80635bea7d5d1461006e5780635c60da1b14610099575b600080369050141561003a5761006c565b60006100446100c4565b90503660008037600080366000845af43d6000803e8060008114610067573d6000f35b3d6000fd5b005b34801561007a57600080fd5b506100836100f5565b6040516100909190610191565b60405180910390f35b3480156100a557600080fd5b506100ae6100c4565b6040516100bb9190610176565b60405180910390f35b6000807f360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc60001b9050805491505090565b6040518060400160405280600a81526020017f323031393130323530300000000000000000000000000000000000000000000081525081565b610137816101cf565b82525050565b6000610148826101b3565b61015281856101be565b9350610162818560208601610201565b61016b81610234565b840191505092915050565b600060208201905061018b600083018461012e565b92915050565b600060208201905081810360008301526101ab818461013d565b905092915050565b600081519050919050565b600082825260208201905092915050565b60006101da826101e1565b9050919050565b600073ffffffffffffffffffffffffffffffffffffffff82169050919050565b60005b8381101561021f578082015181840152602081019050610204565b8381111561022e576000848401525b50505050565b6000601f19601f830116905091905056fea365627a7a72315820df4401333fb8c26a38547c751ff4c528d95f9c5a191e6bc81f110b41250720046c6578706572696d656e74616cf564736f6c634300050c0040`
 
-### AuthereumAccountv2020020200
+## Changelog
 
-  This update was in response to our Quantstamp  audit.
+### Authereum Account
 
-  **Genearl**
-  * Require that initialization data has a length of > 0. Prior to this verison, it simply did nothing if the length was 0.
+#### 2020070100
+
+  This update was a routine update to prepare for another audit by G0 Group.
+
+  **General**
+  * Update contract to Solidity 0.5.17
+  * Normalize `loginKeyRestrictionData` to `loginKeyRestrictionsData`
+  * Fix spelling issues
+  * Remove 0 fee payments (don't transfer 0 tokens/ETH)
+  * Remove refund check (now done by relayer)
+  * Change all instances of `authereum.eth` to `auth.eth`
+  * Update to Truffle `istanbul` compiler
+  * Remove unnecessary return of the message hash from `_atomicExecuteMultipleMetaTransactions`
+  * Add ERC777 support
+  * Allow for limited sending of transactions from a login key to an auth key or self
+  * Disallow auth keys from being `self`
+  * Remove unused `onlyAuthKeySender` modifier
+  * Add pre- and post-hooks to login key transactions
+  * Add `name` variable to contracts
+  * Convert `authereumVersion` to `version`
+  * Add `implementation()`
+  * Add `implementation()` and `upgradeToAndCall()` to `IAuthereumAccount.sol`
+
+  **Tests**
+  * Add tests
+
+#### 2020021700
+
+  This update was in response to samczsun's disclosure:
+
+  **Bugfixes**
+  * Validate both auth key and login key tx prior to execution
+
+#### 2020020200
+
+  This update was in response to our Quantstamp audit.
+
+  **General**
+  * Require that initialization data has a length of > 0. Prior to this version, it simply did nothing if the length was 0.
   * Fix typos
 
   **Bugfixes**
   * Return the appropriate data from `executeMultipleMetaTransactions()`
 
-### AuthereumAccountv2020010900
+#### 2020010900
 
   **Bugfixes**
   * Fee token rate calculation
 
-### AuthereumAccountv2019122000
+#### 2019122000
 
   **General**
   * Major refactor
   * Introduce fee toke
 
-### AuthereumAccountv2019111500
+#### 2019111500
 
   **General**
   * Architecture upgrade
@@ -215,20 +284,103 @@ npm run test
   **Bugfixes**
   * General bug fixes
 
-### AuthereumAccountv2019102500
+#### 2019102500
 
   **General**
   * Original contract
 
+### Authereum Proxy Factory
 
-# FAQ
+#### 2020070100
+
+  **General**
+  * Update contract to Solidity 0.5.17
+  * Add `name`
+  * Add `version`
+  * Pass `initCode` directly into the constructor
+  * Hash `initData` in the `create2` salt to validate auth key
+
+#### 2019111500
+
+  **General**
+  * Add `initCode` setter and change event
+  * Add `authereumEnsManager` setter and change event
+
+#### 2019102500
+
+  **General**
+  * Original contract
+
+### Authereum ENS Manager
+
+#### 2020070100
+
+  **General**
+  * Update contract to Solidity 0.5.17
+  * Add `name`
+  * Add `version`
+  * Update internal variable from `name` to `_name`
+
+#### 2019111500
+
+  **General**
+  * Add ability to change rootnode text
+  * Add ability to change rootnode contenthash
+
+#### 2019102500
+
+  **General**
+  * Original contract
+
+### Authereum ENS Resolver
+
+#### 2020070100
+
+  **General**
+  * Update contract to Solidity 0.5.17
+  * Add `version`
+
+#### 2019111500
+
+  **General**
+  * Update contract to Solidity 0.5.12
+  * Add `text` and `contenthash` to interface
+  * Add `text` and `contenthash` as setter and getter
+
+#### 2019102500
+
+  **General**
+  * Original contract
+
+### Authereum Delegate Key Module
+
+#### 2020070100
+
+  **General**
+  * Original contract
+
+### Authereum Recovery Module
+
+#### 2020070100
+
+  **General**
+  * Original contract
+
+### Authereum Login Key Validator
+
+#### 2020070100
+
+  **General**
+  * Original contract
+
+## FAQ
 
 * Why am I getting the following when I run a test?
     ```bash
     connection not open on send()
     connection not open
     ```
-  * Try restarting ganache and runnning `npm run truffle-reset`
+  * Try restarting ganache and running `npm run truffle-reset`
   * Try running ganache-cli on a different port (either `8545` or `9545`)
 
   _Update: 11/19/19 - This error is related to using WebSockets. If this error persists, try using https instead, if possible._
@@ -239,9 +391,9 @@ npm run test
 
 * Why are my tests not running with `Returned values aren't valid, did it run Out of Gas?`
 
-  * You are trying to deploy on a different network. Try changing the `.env` file to reflect the network you are trying to depoy on.
+  * You are trying to deploy on a different network. Try changing the `.env` file to reflect the network you are trying to deploy on.
 
-  * Delete the `build` folder and run `truffle complie && truffle migrate --reset`
+  * Delete the `build` folder and run `truffle compile && truffle migrate --reset`
 
 * Why am I getting the following error when running tests?
 ```
@@ -249,7 +401,7 @@ Error: EnsRegistry error: contract binary not set. Can't deploy new instance.
 This contract may be abstract, not implement an abstract parent's methods completely
 or not invoke an inherited contract's constructor correctly
 ```
-  * Delete the `build` folder and run `truffle complie && truffle migrate --reset`
+  * Delete the `build` folder and run `truffle compile && truffle migrate --reset`
 
 * Why are my tests not running at all (and the output says 0 passing)
 
@@ -259,6 +411,8 @@ or not invoke an inherited contract's constructor correctly
 * What are the event topics for each of the events in AuthereumAccount.sol?
   * `event Upgraded(address indexed implementation);`: `0xbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b`
   * `event CallFailed(string reason);`: `0xb5e1dc2ddc0e1a0221e00b3c0446f36b707001d3ac7cfb494259863fdef7ccd7`
+  * `event AuthKeyAdded(address indexed authKey)`: `0xb020719d16d3c4de45a91f9c329aa61d5bad3f44f760840c8d5d82d4cd3bcc33`
+  * `event AuthKeyRemoved(address indexed authKey)`: `0xbe55f9add9abe657e689a4a84a31854310f260c7e2610bcd22440e3ec3a836a4`
 
 * What is the best way to verify my contract on Etherscan?
   * Run the following command: `truffle run verify xxx@yyy --network zzz`
@@ -275,9 +429,13 @@ or not invoke an inherited contract's constructor correctly
     * `rm -rf build && truffle compile && truffle migrate`
     * `truffle run verify xxx@yyy --network zzz`
 
-* Why does my deplopyed address not match my calculated address?
+* Why does my deployed address not match my calculated address?
   * It is probably the bytecode
     * One thing to look at is `src/constants`. If you updated the compiler, this will need changed, along with the code that uses that data elsewhere.
+
+* Why do I keep getting "Error: Returned error: the tx doesn't have the correct nonce. account has nonce of: 1 tx has nonce of: 0" when I run tests
+  * This is due to a snapshot issue we have. Because we must deploy the 1820 contract with a specific nonce, this error may occur if things get out of order (transactions fail un-gracefully, stopping tests between snapshots, etc.)
+    * To resolve this, simply restart ganache.
 
 # License
 

@@ -11,6 +11,8 @@ const ArtifactAuthereumProxy = artifacts.require('AuthereumProxy')
 const ArtifactAuthereumProxyFactory = artifacts.require('AuthereumProxyFactory')
 const ArtifactAuthereumProxyAccountUpgrade = artifacts.require('UpgradeAccount')
 const ArtifactAuthereumProxyAccountUpgradeWithInit = artifacts.require('UpgradeAccountWithInit')
+const ArtifactAuthereumRecoveryModule = artifacts.require('AuthereumRecoveryModule')
+const ArtifactERC1820Registry = artifacts.require('ERC1820Registry')
 
 contract('BaseAccount', function (accounts) {
   const OWNER = accounts[0]
@@ -22,6 +24,7 @@ contract('BaseAccount', function (accounts) {
   const LOGIN_KEYS = [accounts[10]]
 
   // Test Params
+  let beforeAllSnapshotId
   let snapshotId
 
   // Params
@@ -32,7 +35,7 @@ contract('BaseAccount', function (accounts) {
   let expectedSalt
   let expectedCreationCodeHash
   let nonce
-  let destination
+  let to
   let value
   let gasLimit
   let data
@@ -58,14 +61,26 @@ contract('BaseAccount', function (accounts) {
   let authereumProxyAccountUpgradeWithInitLogicContract
 
   // Contract Instances
+  let authereumRecoveryModule
   let authereumProxy
   let authereumProxyAccount
   let authereumProxyAccountUpgrade
-  let authereumProxyAccountUpgradeWithInitt
+  let authereumProxyAccountUpgradeWithInit
+  let erc1820Registry
 
   before(async () => {
     // Deploy Bad Contract
     badContract = await ArtifactBadTransaction.new()
+
+    // Take snapshot to reset to a known state
+    // This is required due to the deployment of the 1820 contract
+    beforeAllSnapshotId = await timeUtils.takeSnapshot()
+    
+    // Deploy the recovery module
+    authereumRecoveryModule = await ArtifactAuthereumRecoveryModule.new()
+
+    // Deploy the 1820 contract
+    await utils.deploy1820Contract(AUTHEREUM_OWNER)
 
     // Set up ENS defaults
     const { authereumEnsManager } = await utils.setENSDefaults(AUTHEREUM_OWNER)
@@ -75,7 +90,8 @@ contract('BaseAccount', function (accounts) {
 
     // Create Logic Contracts
     authereumAccountLogicContract = await ArtifactAuthereumAccount.new()
-    authereumProxyFactoryLogicContract = await ArtifactAuthereumProxyFactory.new(authereumAccountLogicContract.address, authereumEnsManager.address)
+    const _proxyInitCode = await utils.calculateProxyBytecodeAndConstructor(authereumAccountLogicContract.address)
+    authereumProxyFactoryLogicContract = await ArtifactAuthereumProxyFactory.new(_proxyInitCode, authereumEnsManager.address)
     authereumProxyAccountUpgradeLogicContract = await ArtifactAuthereumProxyAccountUpgrade.new()
     authereumProxyAccountUpgradeWithInitLogicContract = await ArtifactAuthereumProxyAccountUpgradeWithInit.new()
 
@@ -92,29 +108,33 @@ contract('BaseAccount', function (accounts) {
       AUTH_KEYS[0], label, authereumAccountLogicContract.address
     )
 
+    // Set up IERC1820 contract
+    erc1820Registry = await ArtifactERC1820Registry.at(constants.ERC1820_REGISTRY_ADDRESS)
+
     // Wrap in truffle-contract
     authereumProxy = await ArtifactAuthereumProxy.at(expectedAddress)
     authereumProxyAccount = await ArtifactAuthereumAccount.at(expectedAddress)
 
-
-    // // Send relayer ETH to use as a transaction fee
+    // Handle post-proxy deployment
     // await authereumProxyAccount.sendTransaction({ value:constants.TWO_ETHER, from: AUTH_KEYS[0] })
+    await utils.setAuthereumRecoveryModule(authereumProxyAccount, authereumRecoveryModule.address, AUTH_KEYS[0])
+    await utils.setAccountIn1820Registry(authereumProxyAccount, erc1820Registry.address, AUTH_KEYS[0])
 
     // Default transaction data
     nonce = await authereumProxyAccount.nonce()
     nonce = nonce.toNumber()
-    destination = RECEIVERS[0]
+    to = RECEIVERS[0]
     value = 0
     gasLimit = constants.GAS_LIMIT
     data = '0x00'
     gasPrice = constants.GAS_PRICE
     gasOverhead = constants.DEFAULT_GAS_OVERHEAD
-    loginKeyRestrictionsData = constants.DEFAULT_LOGIN_KEY_RESTRICTIONS_DATA
+    loginKeyRestrictionsData = constants.DEFAULT_LOGIN_KEY_EXPIRATION_TIME_DATA
     feeTokenAddress = constants.ZERO_ADDRESS
     feeTokenRate = constants.DEFAULT_TOKEN_RATE
 
     // Convert to transactions array
-    encodedParameters = await utils.encodeTransactionParams(destination, value, gasLimit, data)
+    encodedParameters = await utils.encodeTransactionParams(to, value, gasLimit, data)
     transactions = [encodedParameters]
 
     // Get default signedMessageHash and signedLoginKey
@@ -133,14 +153,18 @@ contract('BaseAccount', function (accounts) {
     loginKeyAttestationSignature = utils.getSignedLoginKey(LOGIN_KEYS[0], loginKeyRestrictionsData)
   })
 
+  after(async() => {
+    await timeUtils.revertSnapshot(beforeAllSnapshotId.result)
+  })
+
   // Take snapshot before each test and revert after each test
   beforeEach(async() => {
-    snapshotId = await timeUtils.takeSnapshot();
-  });
+    snapshotId = await timeUtils.takeSnapshot()
+  })
 
   afterEach(async() => {
-    await timeUtils.revertSnapshot(snapshotId.result);
-  });
+    await timeUtils.revertSnapshot(snapshotId.result)
+  })
 
   //**********//
   //  Tests  //
@@ -158,24 +182,12 @@ contract('BaseAccount', function (accounts) {
       accountBalance = await balance.current(authereumProxyAccount.address)
       assert.equal(Number(accountBalance), constants.FOUR_ETHER)
     })
-    it('Should use exactly 21084/21084 gas (depending on the fork) on a transaction with no data', async () => {
-      // The forkId and variable expected gas is required here due to the gas
-      // changes in Istanbul (specifically EIP EIP-1884).
-      // The forkId is custom and iplemented in the `npm run ganache` and
-      // `npm run ganache-istanbul` scripts.
-      // Pre-istanbul ID = 1234
-      // Post-istanbul ID = 5678
-      const forkId = await web3.eth.net.getId()
-
-      // NOTE: These are expected to be the same cost both pre and post Istanbul.
-      // NOTE: This is because this is a simple `send` or `transfer` with no data.
-      // NOTE: This type of transaction simply returns and does nothing else.
-      let expectedGas
-      if (forkId === 1234) {
-        expectedGas = 21084
-      } else if (forkId === 5678) {
-        expectedGas = 21084
-      }
+    it('Should use exactly 21062 gas on a transaction with no data', async () => {
+      // NOTE: The update from constantinople to istanbul forced a change in gas here.
+      // This test was originally written to determine these changes. Since the
+      // fork was successfully implemented, the constantinople checks have been
+      // removed.
+      const expectedGas = 21062
 
       // NOTE: There is a bug in Truffle that causes data to not be sent
       // NOTE: with the transaction when sending with truffle-contracts.
@@ -186,20 +198,12 @@ contract('BaseAccount', function (accounts) {
       })
       assert.equal(transaction.gasUsed, expectedGas)
     })
-    it('Should use exactly 22654/23276 gas (depending on the fork) on a transaction with data', async () => {
-      // The forkId and variable expected gas is required here due to the gas
-      // changes in Istanbul (specifically EIP EIP-1884).
-      // The forkId is custom and iplemented in the `npm run ganache` and
-      // `npm run ganache-istanbul` scripts.
-      // Pre-istanbul ID = 1234
-      // Post-istanbul ID = 5678
-      const forkId = await web3.eth.net.getId()
-      let expectedGas
-      if (forkId === 1234) {
-        expectedGas = 22654
-      } else if (forkId === 5678) {
-        expectedGas = 23276
-      }
+    it('Should use exactly 22928 gas on a transaction with data', async () => {
+      // NOTE: The update from constantinople to istanbul forced a change in gas here.
+      // This test was originally written to determine these changes. Since the
+      // fork was successfully implemented, the constantinople checks have been
+      // removed.
+      const expectedGas = 22928
 
       // NOTE: There is a bug in Truffle that causes data to not be sent
       // NOTE: with the transaction when sending with truffle-contracts.
@@ -226,7 +230,7 @@ contract('BaseAccount', function (accounts) {
         expectEvent.inLogs(logs, 'AuthKeyAdded', { authKey: AUTH_KEYS[1] })
 
         const numAuthKeys = await authereumProxyAccount.numAuthKeys()
-        assert.equal(numAuthKeys, 2)
+        assert.equal(numAuthKeys, 3)
       })
       it('Should add two authKeys', async () => {
         var { logs } = await authereumProxyAccount.addAuthKey(AUTH_KEYS[1], { from: AUTH_KEYS[0] })
@@ -235,7 +239,7 @@ contract('BaseAccount', function (accounts) {
         expectEvent.inLogs(logs, 'AuthKeyAdded', { authKey: AUTH_KEYS[1] })
 
         let numAuthKeys = await authereumProxyAccount.numAuthKeys()
-        assert.equal(numAuthKeys, 2)
+        assert.equal(numAuthKeys, 3)
 
         var { logs } = await authereumProxyAccount.addAuthKey(AUTH_KEYS[2], { from: AUTH_KEYS[0] })
         const authKey2 = await authereumProxyAccount.authKeys(AUTH_KEYS[2])
@@ -243,7 +247,7 @@ contract('BaseAccount', function (accounts) {
         expectEvent.inLogs(logs, 'AuthKeyAdded', { authKey: AUTH_KEYS[2] })
 
         numAuthKeys = await authereumProxyAccount.numAuthKeys()
-        assert.equal(numAuthKeys, 3)
+        assert.equal(numAuthKeys, 4)
       })
       it('Should add an authKey through executeMultipleAuthKeyMetaTransactions', async () => {
         // Confirm that auth key is not yet added
@@ -251,7 +255,7 @@ contract('BaseAccount', function (accounts) {
         assert.equal(_authKey, false)
 
         // Set up transaction to add an auth key
-        const _destination = authereumProxyAccount.address
+        const _to = authereumProxyAccount.address
         const _data = await web3.eth.abi.encodeFunctionCall({
           name: 'addAuthKey',
           type: 'function',
@@ -262,8 +266,12 @@ contract('BaseAccount', function (accounts) {
           }, [AUTH_KEYS[1]])
 
         // Convert to transactions array
-        const _encodedParameters = await utils.encodeTransactionParams(_destination, value, gasLimit, _data)
+        const _encodedParameters = await utils.encodeTransactionParams(_to, value, gasLimit, _data)
         const _transactions = [_encodedParameters]
+
+        // NOTE: As of AuthereumAccountv202003xx00, the contract no longer has a concept of if it should or should not refund.
+        // This is now done by the relayer. This is mimiced here by setting the user's gasPrice to 0
+        const _gasPrice = 0
 
         // Get default signedMessageHash and signedLoginKey
         const _transactionMessageHashSignature = await utils.getAuthKeySignedMessageHash(
@@ -272,14 +280,14 @@ contract('BaseAccount', function (accounts) {
           constants.CHAIN_ID,
           nonce,
           _transactions,
-          gasPrice,
+          _gasPrice,
           gasOverhead,
           feeTokenAddress,
           feeTokenRate
         )
 
         var { logs } = await authereumProxyAccount.executeMultipleAuthKeyMetaTransactions(
-          _transactions, gasPrice, gasOverhead, feeTokenAddress, feeTokenRate, _transactionMessageHashSignature, { from: RELAYER, gasPrice: gasPrice }
+          _transactions, _gasPrice, gasOverhead, feeTokenAddress, feeTokenRate, _transactionMessageHashSignature, { from: RELAYER, gasPrice: gasPrice }
         )
 
         // Confirm that auth key has been added
@@ -288,12 +296,15 @@ contract('BaseAccount', function (accounts) {
         expectEvent.inLogs(logs, 'AuthKeyAdded', { authKey: AUTH_KEYS[1] })
 
         const numAuthKeys = await authereumProxyAccount.numAuthKeys()
-        assert.equal(numAuthKeys, 2)
+        assert.equal(numAuthKeys, 3)
       })
     })
     context('Non-happy Path', async () => {
       it('Should not add the same authKey twice', async () => {
         await expectRevert(authereumProxyAccount.addAuthKey(AUTH_KEYS[0], { from: AUTH_KEYS[0] }), constants.REVERT_MSG.BA_AUTH_KEY_ALREADY_ADDED)
+      })
+      it('Should not add self as an auth key', async () => {
+        await expectRevert(authereumProxyAccount.addAuthKey(authereumProxyAccount.address, { from: AUTH_KEYS[0] }), constants.REVERT_MSG.BA_AUTH_KEY_CANNOT_BE_SELF)
       })
       it('Should not allow a random address to add an auth key', async () => {
         await expectRevert(authereumProxyAccount.addAuthKey(AUTH_KEYS[0], { from: accounts[8] }), constants.REVERT_MSG.BA_REQUIRE_AUTH_KEY_OR_SELF)
@@ -307,7 +318,7 @@ contract('BaseAccount', function (accounts) {
         assert.equal(_authKey, false)
 
         // Set up transaction to add an auth key
-        const _destination = authereumProxyAccount.address
+        const _to = authereumProxyAccount.address
         const _data = await web3.eth.abi.encodeFunctionCall({
           name: 'addAuthKey',
           type: 'function',
@@ -318,7 +329,7 @@ contract('BaseAccount', function (accounts) {
           }, [accounts[9]])
 
         // Convert to transactions array
-        const _encodedParameters = await utils.encodeTransactionParams(_destination, value, gasLimit, _data)
+        const _encodedParameters = await utils.encodeTransactionParams(_to, value, gasLimit, _data)
         const _transactions = [_encodedParameters]
 
         // Get default signedMessageHash and signedLoginKey
@@ -353,7 +364,7 @@ contract('BaseAccount', function (accounts) {
         assert.equal(_authKey, false)
 
         // Set up transaction to add an auth key
-        const _destination = authereumProxyAccount.address
+        const _to = authereumProxyAccount.address
         const _data = await web3.eth.abi.encodeFunctionCall({
           name: 'addAuthKey',
           type: 'function',
@@ -364,7 +375,7 @@ contract('BaseAccount', function (accounts) {
           }, [AUTH_KEYS[1]])
 
         // Convert to transactions array
-        const _encodedParameters = await utils.encodeTransactionParams(_destination, value, gasLimit, _data)
+        const _encodedParameters = await utils.encodeTransactionParams(_to, value, gasLimit, _data)
         const _transactions = [_encodedParameters]
 
         // Get default signedMessageHash and signedLoginKey
@@ -396,7 +407,7 @@ contract('BaseAccount', function (accounts) {
         expectEvent.inLogs(logs, 'AuthKeyAdded', { authKey: AUTH_KEYS[1] })
 
         let numAuthKeys = await authereumProxyAccount.numAuthKeys()
-        assert.equal(numAuthKeys, 2)
+        assert.equal(numAuthKeys, 3)
 
         // Remove
         var { logs } = await authereumProxyAccount.removeAuthKey(AUTH_KEYS[1], { from: AUTH_KEYS[0] })
@@ -405,7 +416,7 @@ contract('BaseAccount', function (accounts) {
         expectEvent.inLogs(logs, 'AuthKeyRemoved', { authKey: AUTH_KEYS[1] })
 
         numAuthKeys = await authereumProxyAccount.numAuthKeys()
-        assert.equal(numAuthKeys, 1)
+        assert.equal(numAuthKeys, 2)
       })
       it('Should add two authKeys and then remove two authKeys', async () => {
         // Add
@@ -415,7 +426,7 @@ contract('BaseAccount', function (accounts) {
         expectEvent.inLogs(logs, 'AuthKeyAdded', { authKey: AUTH_KEYS[1] })
 
         let numAuthKeys = await authereumProxyAccount.numAuthKeys()
-        assert.equal(numAuthKeys, 2)
+        assert.equal(numAuthKeys, 3)
 
         var { logs } = await authereumProxyAccount.addAuthKey(AUTH_KEYS[2], { from: AUTH_KEYS[0] })
         authKey = await authereumProxyAccount.authKeys(AUTH_KEYS[2])
@@ -423,7 +434,7 @@ contract('BaseAccount', function (accounts) {
         expectEvent.inLogs(logs, 'AuthKeyAdded', { authKey: AUTH_KEYS[2] })
 
         numAuthKeys = await authereumProxyAccount.numAuthKeys()
-        assert.equal(numAuthKeys, 3)
+        assert.equal(numAuthKeys, 4)
 
         // Remove
         var { logs } = await authereumProxyAccount.removeAuthKey(AUTH_KEYS[2], { from: AUTH_KEYS[0] })
@@ -432,7 +443,7 @@ contract('BaseAccount', function (accounts) {
         expectEvent.inLogs(logs, 'AuthKeyRemoved', { authKey: AUTH_KEYS[2] })
 
         numAuthKeys = await authereumProxyAccount.numAuthKeys()
-        assert.equal(numAuthKeys, 2)
+        assert.equal(numAuthKeys, 3)
 
         var { logs } = await authereumProxyAccount.removeAuthKey(AUTH_KEYS[1], { from: AUTH_KEYS[0] })
         authKey = await authereumProxyAccount.authKeys(AUTH_KEYS[1])
@@ -440,7 +451,7 @@ contract('BaseAccount', function (accounts) {
         expectEvent.inLogs(logs, 'AuthKeyRemoved', { authKey: AUTH_KEYS[1] })
 
         numAuthKeys = await authereumProxyAccount.numAuthKeys()
-        assert.equal(numAuthKeys, 1)
+        assert.equal(numAuthKeys, 2)
       })
       it('Should add two authKeys and then remove two authKeys in reverse order', async () => {
         // Add
@@ -450,7 +461,7 @@ contract('BaseAccount', function (accounts) {
         expectEvent.inLogs(logs, 'AuthKeyAdded', { authKey: AUTH_KEYS[1] })
 
         let numAuthKeys = await authereumProxyAccount.numAuthKeys()
-        assert.equal(numAuthKeys, 2)
+        assert.equal(numAuthKeys, 3)
 
         var { logs } = await authereumProxyAccount.addAuthKey(AUTH_KEYS[2], { from: AUTH_KEYS[0] })
         authKey = await authereumProxyAccount.authKeys(AUTH_KEYS[2])
@@ -458,7 +469,7 @@ contract('BaseAccount', function (accounts) {
         expectEvent.inLogs(logs, 'AuthKeyAdded', { authKey: AUTH_KEYS[2] })
 
         numAuthKeys = await authereumProxyAccount.numAuthKeys()
-        assert.equal(numAuthKeys, 3)
+        assert.equal(numAuthKeys, 4)
 
         // Remove
         var { logs } = await authereumProxyAccount.removeAuthKey(AUTH_KEYS[2], { from: AUTH_KEYS[0] })
@@ -467,7 +478,7 @@ contract('BaseAccount', function (accounts) {
         expectEvent.inLogs(logs, 'AuthKeyRemoved', { authKey: AUTH_KEYS[2] })
 
         numAuthKeys = await authereumProxyAccount.numAuthKeys()
-        assert.equal(numAuthKeys, 2)
+        assert.equal(numAuthKeys, 3)
 
         var { logs } = await authereumProxyAccount.removeAuthKey(AUTH_KEYS[1], { from: AUTH_KEYS[0] })
         authKey = await authereumProxyAccount.authKeys(AUTH_KEYS[1])
@@ -475,7 +486,7 @@ contract('BaseAccount', function (accounts) {
         expectEvent.inLogs(logs, 'AuthKeyRemoved', { authKey: AUTH_KEYS[1] })
 
         numAuthKeys = await authereumProxyAccount.numAuthKeys()
-        assert.equal(numAuthKeys, 1)
+        assert.equal(numAuthKeys, 2)
       })
       it('Should add an authKey and then remove the original authKey', async () => {
         // Add
@@ -485,7 +496,7 @@ contract('BaseAccount', function (accounts) {
         expectEvent.inLogs(logs, 'AuthKeyAdded', { authKey: AUTH_KEYS[1] })
 
         let numAuthKeys = await authereumProxyAccount.numAuthKeys()
-        assert.equal(numAuthKeys, 2)
+        assert.equal(numAuthKeys, 3)
 
         // Remove
         var { logs } = await authereumProxyAccount.removeAuthKey(AUTH_KEYS[0], { from: AUTH_KEYS[1] })
@@ -494,7 +505,7 @@ contract('BaseAccount', function (accounts) {
         expectEvent.inLogs(logs, 'AuthKeyRemoved', { authKey: AUTH_KEYS[0] })
 
         numAuthKeys = await authereumProxyAccount.numAuthKeys()
-        assert.equal(numAuthKeys, 1)
+        assert.equal(numAuthKeys, 2)
       })
       it('Should remove an authKey through executeMultipleAuthKeyMetaTransactions', async () => {
         // Add auth key
@@ -505,7 +516,7 @@ contract('BaseAccount', function (accounts) {
         assert.equal(_authKey, true)
 
         // Set up transaction to remove an auth key
-        const _destination = authereumProxyAccount.address
+        const _to = authereumProxyAccount.address
         const _data = await web3.eth.abi.encodeFunctionCall({
           name: 'removeAuthKey',
           type: 'function',
@@ -516,8 +527,12 @@ contract('BaseAccount', function (accounts) {
           }, [AUTH_KEYS[1]])
 
         // Convert to transactions array
-        const _encodedParameters = await utils.encodeTransactionParams(_destination, value, gasLimit, _data)
+        const _encodedParameters = await utils.encodeTransactionParams(_to, value, gasLimit, _data)
         const _transactions = [_encodedParameters]
+
+        // NOTE: As of AuthereumAccountv202003xx00, the contract no longer has a concept of if it should or should not refund.
+        // This is now done by the relayer. This is mimiced here by setting the user's gasPrice to 0
+        const _gasPrice = 0
 
         // Get default signedMessageHash and signedLoginKey
         const _transactionMessageHashSignature = await utils.getAuthKeySignedMessageHash(
@@ -526,14 +541,14 @@ contract('BaseAccount', function (accounts) {
           constants.CHAIN_ID,
           nonce,
           _transactions,
-          gasPrice,
+          _gasPrice,
           gasOverhead,
           feeTokenAddress,
           feeTokenRate
         )
 
         await authereumProxyAccount.executeMultipleAuthKeyMetaTransactions(
-          _transactions, gasPrice, gasOverhead, feeTokenAddress, feeTokenRate, _transactionMessageHashSignature, { from: RELAYER, gasPrice: gasPrice }
+          _transactions, _gasPrice, gasOverhead, feeTokenAddress, feeTokenRate, _transactionMessageHashSignature, { from: RELAYER, gasPrice: gasPrice }
         )
 
         // Confirm that auth key has been removed
@@ -542,7 +557,7 @@ contract('BaseAccount', function (accounts) {
         expectEvent.inLogs(logs, 'AuthKeyAdded', { authKey: AUTH_KEYS[1] })
 
         const numAuthKeys = await authereumProxyAccount.numAuthKeys()
-        assert.equal(numAuthKeys, 1)
+        assert.equal(numAuthKeys, 2)
       })
     })
     context('Non-Happy Path', async () => {
@@ -550,6 +565,7 @@ contract('BaseAccount', function (accounts) {
         await expectRevert(authereumProxyAccount.removeAuthKey(AUTH_KEYS[2], { from: AUTH_KEYS[0] }), constants.REVERT_MSG.BA_AUTH_KEY_NOT_YET_ADDED)
       })
       it('Should not allow a user to remove all authKeys', async () => {
+        await authereumProxyAccount.removeAuthKey(authereumRecoveryModule.address, { from: AUTH_KEYS[0] })
         await expectRevert(authereumProxyAccount.removeAuthKey(AUTH_KEYS[0], { from: AUTH_KEYS[0] }), constants.REVERT_MSG.BA_CANNOT_REMOVE_LAST_AUTH_KEY)
       })
       it('Should not allow a random address to remove an auth key', async () => {
@@ -564,7 +580,7 @@ contract('BaseAccount', function (accounts) {
         assert.equal(_authKey, true)
 
         // Set up transaction to add an auth key
-        const _destination = authereumProxyAccount.address
+        const _to = authereumProxyAccount.address
         const _data = await web3.eth.abi.encodeFunctionCall({
           name: 'removeAuthKey',
           type: 'function',
@@ -575,7 +591,7 @@ contract('BaseAccount', function (accounts) {
           }, [AUTH_KEYS[1]])
 
         // Convert to transactions array
-        const _encodedParameters = await utils.encodeTransactionParams(_destination, value, gasLimit, _data)
+        const _encodedParameters = await utils.encodeTransactionParams(_to, value, gasLimit, _data)
         const _transactions = [_encodedParameters]
 
         // Get default signedMessageHash and signedLoginKey
@@ -612,7 +628,7 @@ contract('BaseAccount', function (accounts) {
         assert.equal(_authKey, true)
 
         // Set up transaction to add an auth key
-        const _destination = authereumProxyAccount.address
+        const _to = authereumProxyAccount.address
         const _data = await web3.eth.abi.encodeFunctionCall({
           name: 'removeAuthKey',
           type: 'function',
@@ -623,7 +639,7 @@ contract('BaseAccount', function (accounts) {
           }, [AUTH_KEYS[1]])
 
         // Convert to transactions array
-        const _encodedParameters = await utils.encodeTransactionParams(_destination, value, gasLimit, _data)
+        const _encodedParameters = await utils.encodeTransactionParams(_to, value, gasLimit, _data)
         const _transactions = [_encodedParameters]
 
         // Get default signedMessageHash and signedLoginKey

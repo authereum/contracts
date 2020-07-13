@@ -2,7 +2,6 @@ const utils = require('../utils/utils')
 const constants = require('../utils/constants.js')
 const timeUtils = require('../utils/time.js')
 
-const { setENSDefaults, setAuthereumENSManagerDefaults, buildCreate2Address, getSaltHash } = require('../utils/utils')
 const { expectEvent, expectRevert } = require('@openzeppelin/test-helpers')
 
 const ArtifactBadTransaction = artifacts.require('BadTransaction')
@@ -11,6 +10,8 @@ const ArtifactAuthereumProxy = artifacts.require('AuthereumProxy')
 const ArtifactAuthereumProxyFactory = artifacts.require('AuthereumProxyFactory')
 const ArtifactAuthereumProxyAccountUpgrade = artifacts.require('UpgradeAccount')
 const ArtifactAuthereumProxyAccountUpgradeWithInit = artifacts.require('UpgradeAccountWithInit')
+const ArtifactAuthereumRecoveryModule = artifacts.require('AuthereumRecoveryModule')
+const ArtifactERC1820Registry = artifacts.require('ERC1820Registry')
 
 contract('AccountUpgradeability', function (accounts) {
   const AUTHEREUM_OWNER = accounts[0]
@@ -20,6 +21,7 @@ contract('AccountUpgradeability', function (accounts) {
   const RECEIVERS = [accounts[5], accounts[6], accounts[7]]
 
   // Test Params
+  let beforeAllSnapshotId
   let snapshotId
 
   // Parameters
@@ -28,7 +30,7 @@ contract('AccountUpgradeability', function (accounts) {
   let expectedSalt
   let expectedCreationCodeHash
   let nonce
-  let destination
+  let to
   let value
   let gasLimit
   let implementationData
@@ -54,12 +56,24 @@ contract('AccountUpgradeability', function (accounts) {
   let authereumProxyAccountUpgradeWithInitLogicContract
 
   // Contract Instances
+  let authereumRecoveryModule
   let authereumProxy
   let authereumProxyAccount
   let authereumProxyAccountUpgrade
   let authereumProxyAccountUpgradeWithInit
+  let erc1820Registry
 
   before(async () => {
+    // Take snapshot to reset to a known state
+    // This is required due to the deployment of the 1820 contract
+    beforeAllSnapshotId = await timeUtils.takeSnapshot()
+    
+    // Deploy the recovery module
+    authereumRecoveryModule = await ArtifactAuthereumRecoveryModule.new()
+
+    // Deploy the 1820 contract
+    await utils.deploy1820Contract(AUTHEREUM_OWNER)
+
     // Set up ENS defaults
     const { authereumEnsManager } = await utils.setENSDefaults(AUTHEREUM_OWNER)
 
@@ -68,7 +82,8 @@ contract('AccountUpgradeability', function (accounts) {
 
     // Create Logic Contracts
     authereumAccountLogicContract = await ArtifactAuthereumAccount.new()
-    authereumProxyFactoryLogicContract = await ArtifactAuthereumProxyFactory.new(authereumAccountLogicContract.address, authereumEnsManager.address)
+    const _proxyInitCode = await utils.calculateProxyBytecodeAndConstructor(authereumAccountLogicContract.address)
+    authereumProxyFactoryLogicContract = await ArtifactAuthereumProxyFactory.new(_proxyInitCode, authereumEnsManager.address)
     authereumProxyAccountUpgradeLogicContract = await ArtifactAuthereumProxyAccountUpgrade.new()
     authereumProxyAccountUpgradeWithInitLogicContract = await ArtifactAuthereumProxyAccountUpgradeWithInit.new()
 
@@ -85,20 +100,25 @@ contract('AccountUpgradeability', function (accounts) {
       AUTH_KEYS[0], label, authereumAccountLogicContract.address
     )
 
+    // Set up IERC1820 contract
+    erc1820Registry = await ArtifactERC1820Registry.at(constants.ERC1820_REGISTRY_ADDRESS)
+
     // Wrap in truffle-contract
     badContract = await ArtifactBadTransaction.new()
     authereumProxy = await ArtifactAuthereumProxy.at(expectedAddress)
     authereumProxyAccount = await ArtifactAuthereumAccount.at(expectedAddress)
 
-    // Send relayer ETH to use as a transaction fee
+    // Handle post-proxy deployment
     await authereumProxyAccount.sendTransaction({ value:constants.TWO_ETHER, from: AUTH_KEYS[0] })
+    await utils.setAuthereumRecoveryModule(authereumProxyAccount, authereumRecoveryModule.address, AUTH_KEYS[0])
+    await utils.setAccountIn1820Registry(authereumProxyAccount, erc1820Registry.address, AUTH_KEYS[0])
 
     // Generate params
     nonce = await authereumProxyAccount.nonce()
     nonce = nonce.toNumber()
 
     // Default transaction data
-    destination = authereumProxyAccount.address
+    to = authereumProxyAccount.address
     value = 0
     gasPrice = constants.GAS_PRICE
     gasLimit = constants.GAS_LIMIT
@@ -118,7 +138,7 @@ contract('AccountUpgradeability', function (accounts) {
     )
 
     // Convert to transactions array
-    encodedParameters = await utils.encodeTransactionParams(destination, value, gasLimit, data)
+    encodedParameters = await utils.encodeTransactionParams(to, value, gasLimit, data)
     transactions = [encodedParameters]
 
     // Get default signedMessageHash and signedLoginKey
@@ -135,20 +155,32 @@ contract('AccountUpgradeability', function (accounts) {
     )
   })
 
+  after(async() => {
+    await timeUtils.revertSnapshot(beforeAllSnapshotId.result)
+  })
+
   // Take snapshot before each test and revert after each test
   // Also reset core params
   beforeEach(async() => {
-    snapshotId = await timeUtils.takeSnapshot();
-  });
+    snapshotId = await timeUtils.takeSnapshot()
+  })
 
   afterEach(async() => {
-    await timeUtils.revertSnapshot(snapshotId.result);
-  });
+    await timeUtils.revertSnapshot(snapshotId.result)
+  })
 
   //**********//
   //  Tests  //
   //********//
 
+  describe('implementation', () => {
+    context('Happy Path', async () => {
+      it('Should confirm the implementation address after the creation of a proxy', async () => {
+        const implementationAddress = await authereumProxyAccount.implementation()
+        assert.equal(authereumAccountLogicContract.address, implementationAddress)
+      })
+    })
+  })
   describe('upgradeToAndCall', () => {
     context('Happy Path', async () => {
       it('Should upgrade a proxy\'s logic address (w/o init)', async () => {
@@ -157,7 +189,7 @@ contract('AccountUpgradeability', function (accounts) {
         nonce = nonce.toNumber()
 
         // Default transaction data
-        const _destination = authereumProxyAccount.address
+        const _to = authereumProxyAccount.address
         const _value = 0
         const _gasLimit = 1000000
 
@@ -166,7 +198,7 @@ contract('AccountUpgradeability', function (accounts) {
           )
 
         // Convert to transactions array
-        const _encodedParameters = await utils.encodeTransactionParams(_destination, _value, _gasLimit, _data)
+        const _encodedParameters = await utils.encodeTransactionParams(_to, _value, _gasLimit, _data)
         const _transactions = [_encodedParameters]
 
         // Get default signedMessageHash and signedLoginKey
@@ -192,8 +224,8 @@ contract('AccountUpgradeability', function (accounts) {
 
         // Check that this does not affect the proxy's ability to interact with the logic addr it set
         // Check the proxy's logic address
-        const proxyImplementationAddress = await authereumProxy.implementation()
-        assert.equal(authereumProxyAccountUpgradeLogicContract.address, proxyImplementationAddress)
+        const _proxyImplementationAddress = await utils.getImplementationAddressFromStorageSlot(authereumProxy.address)
+        assert.equal(authereumProxyAccountUpgradeLogicContract.address, _proxyImplementationAddress)
 
         // Check that the proxy can call a function on the expected logic address
         const chainId = await authereumProxyAccount.getChainId()
@@ -210,7 +242,7 @@ contract('AccountUpgradeability', function (accounts) {
         nonce = nonce.toNumber()
 
         // Default transaction data
-        const _destination = authereumProxyAccount.address
+        const _to = authereumProxyAccount.address
         const _value = 0
         const _gasLimit = 1000000
 
@@ -226,7 +258,7 @@ contract('AccountUpgradeability', function (accounts) {
           )
 
         // Convert to transactions array
-        const _encodedParameters = await utils.encodeTransactionParams(_destination, _value, _gasLimit, _data)
+        const _encodedParameters = await utils.encodeTransactionParams(_to, _value, _gasLimit, _data)
         const _transactions = [_encodedParameters]
 
         // Get default signedMessageHash and signedLoginKey
@@ -252,8 +284,8 @@ contract('AccountUpgradeability', function (accounts) {
 
         // Check that this does not affect the proxy's ability to interact with the logic addr it set
         // Check the proxy's logic address
-        const proxyImplementationAddress = await authereumProxy.implementation()
-        assert.equal(authereumProxyAccountUpgradeWithInitLogicContract.address, proxyImplementationAddress)
+        const _proxyImplementationAddress = await utils.getImplementationAddressFromStorageSlot(authereumProxy.address)
+        assert.equal(authereumProxyAccountUpgradeWithInitLogicContract.address, _proxyImplementationAddress)
 
         // Check that the proxy can call a function on the expected logic address
         const chainId = await authereumProxyAccount.getChainId()
@@ -284,7 +316,7 @@ contract('AccountUpgradeability', function (accounts) {
         assert.equal(_authKey, false)
 
         // Set up transaction to add an auth key
-        const _destination = authereumProxyAccount.address
+        const _to = authereumProxyAccount.address
         // Get upgrade data
         const _data = await web3.eth.abi.encodeFunctionCall({
           name: 'upgradeTestInit',
@@ -293,7 +325,7 @@ contract('AccountUpgradeability', function (accounts) {
         }, [])
 
         // Convert to transactions array
-        const _encodedParameters = await utils.encodeTransactionParams(_destination, value, gasLimit, _data)
+        const _encodedParameters = await utils.encodeTransactionParams(_to, value, gasLimit, _data)
         const _transactions = [_encodedParameters]
 
         // Get default signedMessageHash and signedLoginKey
@@ -328,7 +360,7 @@ contract('AccountUpgradeability', function (accounts) {
         nonce = nonce.toNumber()
 
         // Default transaction data
-        const _destination = authereumProxyAccount.address
+        const _to = authereumProxyAccount.address
         const _value = 0
         const _gasLimit = 1000000
 
@@ -347,7 +379,7 @@ contract('AccountUpgradeability', function (accounts) {
           )
 
         // Convert to transactions array
-        const _encodedParameters = await utils.encodeTransactionParams(_destination, _value, _gasLimit, _data)
+        const _encodedParameters = await utils.encodeTransactionParams(_to, _value, _gasLimit, _data)
         const _transactions = [_encodedParameters]
 
         // Get default signedMessageHash and signedLoginKey
@@ -375,7 +407,7 @@ contract('AccountUpgradeability', function (accounts) {
         nonce = nonce.toNumber()
 
         // Default transaction data
-        const _destination = authereumProxyAccount.address
+        const _to = authereumProxyAccount.address
         const _value = 0
         const _gasLimit = 1000000
 
@@ -384,7 +416,7 @@ contract('AccountUpgradeability', function (accounts) {
           )
 
         // Convert to transactions array
-        const _encodedParameters = await utils.encodeTransactionParams(_destination, _value, _gasLimit, _data)
+        const _encodedParameters = await utils.encodeTransactionParams(_to, _value, _gasLimit, _data)
         const _transactions = [_encodedParameters]
 
         // Get default signedMessageHash and signedLoginKey

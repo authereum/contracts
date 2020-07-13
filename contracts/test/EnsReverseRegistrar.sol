@@ -1,4 +1,4 @@
-pragma solidity 0.5.16;
+pragma solidity 0.5.17;
 
 import "./EnsRegistry.sol";
 import "./EnsResolver.sol";
@@ -7,8 +7,6 @@ import "./EnsResolver.sol";
  * ENS Reverse registrar test contract.
  */
 contract EnsReverseRegistrar {
-
-    string constant public ensReverseRegistrarVersion = "2019102500";
 
    // namehash('addr.reverse')
     bytes32 constant ADDR_REVERSE_NODE = 0x91d1777781884d03a6757a803996e38de2a42967fb37eeaca72729271025a9e2;

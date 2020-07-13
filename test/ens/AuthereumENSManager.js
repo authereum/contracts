@@ -12,6 +12,8 @@ const ArtifactAuthereumProxyAccountUpgrade = artifacts.require('UpgradeAccount')
 const ArtifactAuthereumProxyAccountUpgradeWithInit = artifacts.require('UpgradeAccountWithInit')
 const AuthereumEnsResolver = artifacts.require('AuthereumEnsResolver')
 const AuthereumEnsManager = artifacts.require('AuthereumEnsManager')
+const ArtifactAuthereumRecoveryModule = artifacts.require('AuthereumRecoveryModule')
+const ArtifactERC1820Registry = artifacts.require('ERC1820Registry')
 
 var namehash = require('eth-ens-namehash')
 
@@ -25,6 +27,7 @@ contract('AuthereumEnsManager', function (accounts) {
   const timelockContractAddress = '0x6c36a7EE3c2DCA0E1ebE20Fa26c2B76841286eF6' // Arbitrary for now
 
   // Test Params
+  let beforeAllSnapshotId
   let snapshotId
 
   // Default Params
@@ -89,12 +92,24 @@ contract('AuthereumEnsManager', function (accounts) {
   let authereumProxyAccountUpgradeWithInitLogicContract
 
   // Contract Instances
+  let authereumRecoveryModule
   let authereumProxy
   let authereumProxyAccount
   let authereumProxyAccountUpgrade
   let authereumProxyAccountUpgradeWithInit
+  let erc1820Registry
 
   before(async () => {
+    // Take snapshot to reset to a known state
+    // This is required due to the deployment of the 1820 contract
+    beforeAllSnapshotId = await timeUtils.takeSnapshot()
+    
+    // Deploy the recovery module
+    authereumRecoveryModule = await ArtifactAuthereumRecoveryModule.new()
+
+    // Deploy the 1820 contract
+    await utils.deploy1820Contract(AUTHEREUM_OWNER)
+
     // Set up ENS defaults
     const ensContracts = await utils.setENSDefaults(AUTHEREUM_OWNER)
     ensRegistry = ensContracts.ensRegistry
@@ -104,7 +119,8 @@ contract('AuthereumEnsManager', function (accounts) {
 
     // Create Logic Contracts
     authereumAccountLogicContract = await ArtifactAuthereumAccount.new()
-    authereumProxyFactoryLogicContract = await ArtifactAuthereumProxyFactory.new(authereumAccountLogicContract.address, authereumEnsManager.address)
+    const _proxyInitCode = await utils.calculateProxyBytecodeAndConstructor(authereumAccountLogicContract.address)
+    authereumProxyFactoryLogicContract = await ArtifactAuthereumProxyFactory.new(_proxyInitCode, authereumEnsManager.address)
     authereumProxyAccountUpgradeLogicContract = await ArtifactAuthereumProxyAccountUpgrade.new()
     authereumProxyAccountUpgradeWithInitLogicContract = await ArtifactAuthereumProxyAccountUpgradeWithInit.new()
 
@@ -121,6 +137,9 @@ contract('AuthereumEnsManager', function (accounts) {
       AUTH_KEYS[0], label, authereumAccountLogicContract.address
     )
 
+    // Set up IERC1820 contract
+    erc1820Registry = await ArtifactERC1820Registry.at(constants.ERC1820_REGISTRY_ADDRESS)
+
     // Wrap in truffle-contract
     badContract = await ArtifactBadTransaction.new()
     authereumProxy = await ArtifactAuthereumProxy.at(expectedAddress)
@@ -128,58 +147,87 @@ contract('AuthereumEnsManager', function (accounts) {
 
     // Declare variables
     proxyFactoryAddress = authereumProxyFactoryLogicContract.address
-    saltHash = utils.getSaltHash(constants.SALT, accounts[0])
-  });
+    const _initData = await utils.getAuthereumAccountCreationData(AUTH_KEYS[0])
+    saltHash = utils.getSaltHash(constants.SALT, _initData)
+
+    // Handle post-proxy deployment
+    await authereumProxyAccount.sendTransaction({ value:constants.TWO_ETHER, from: AUTH_KEYS[0] })
+    await utils.setAuthereumRecoveryModule(authereumProxyAccount, authereumRecoveryModule.address, AUTH_KEYS[0])
+    await utils.setAccountIn1820Registry(authereumProxyAccount, erc1820Registry.address, AUTH_KEYS[0])
+
+  })
+
+  after(async() => {
+    await timeUtils.revertSnapshot(beforeAllSnapshotId.result)
+  })
 
   // Take snapshot before each test and revert after each test
   beforeEach(async() => {
-    snapshotId = await timeUtils.takeSnapshot();
-  });
+    snapshotId = await timeUtils.takeSnapshot()
+  })
 
   afterEach(async() => {
-    await timeUtils.revertSnapshot(snapshotId.result);
-  });
+    await timeUtils.revertSnapshot(snapshotId.result)
+  })
 
   //**********//
   //  Tests  //
   //********//
 
+  describe('name', () => {
+    context('Happy path', () => {
+      it('Should return the name of the contract', async () => {
+        const _name = await authereumEnsManager.name.call()
+        assert.equal(_name, constants.CONTRACTS.AUTHEREUM_ENS_MANAGER.NAME)
+      })
+    })
+  })
+  describe('version', () => {
+    context('Happy path', () => {
+      it('Should return the version of the contract', async () => {
+        const _version = await authereumEnsManager.version.call()
+        const _contractVersions = constants.CONTRACTS.AUTHEREUM_ACCOUNT.VERSIONS
+        const _latestVersionIndex = _contractVersions.length - 1
+        assert.equal(_version, _contractVersions[_latestVersionIndex])
+      })
+    })
+  })
   describe('Sanity Checks', () => {
     context('Happy Path', async () => {
       it('Should set the Authereum ENS Manager as the owner of auth.eth', async () => {
         const owner = await ensRegistry.owner(authDotEthNode);
         assert.equal(owner, authereumEnsManager.address, 'Authereum ENS manager should be the owner of auth.eth');
-      });
+      })
       it('Should return the Authereum resolver address for a subdomain', async () => {
         const resolver = await ensRegistry.resolver(testDotauthDotEthNode);
         assert.equal(resolver, authereumEnsResolver.address);
-      });
+      })
       it('Should return address(0) for the authDotEthNode resolver', async () => {
         const resolver = await authereumEnsResolver.addr(authDotEthNode);
         assert.equal(resolver, constants.ZERO_ADDRESS);
-      });
+      })
       it('Should return address(0) for an unclaimed subdomain resolver', async () => {
         const resolver = await authereumEnsResolver.addr(unclaimedLabelDotauthDotEthNode);
         assert.equal(resolver, constants.ZERO_ADDRESS);
-      });
-    });
-  });
+      })
+    })
+  })
   describe("getEnsRegistry", () => {
     context('Happy Path', async () => {
       it('Should return the current registry', async () => {
         const resolver = await authereumEnsManager.getEnsRegistry();
         assert.equal(resolver, ensRegistry.address);
-      });
-    });
-  });
+      })
+    })
+  })
   describe('getEnsReverseRegistrar', () => {
     context('Happy Path', async () => {
       it('Should return the ENS Reverse Registrar', async () => {
         const resolver = await authereumEnsManager.getEnsReverseRegistrar();
         assert.equal(resolver, ensReverseRegistrar.address);
-      });
-    });
-  });
+      })
+    })
+  })
   describe('changeRootnodeOwner', () => {
     context('Happy Path', async () => {
       it('Should update the owner of the rootNode from the manager address to a new manager address', async () => {
@@ -192,17 +240,17 @@ contract('AuthereumEnsManager', function (accounts) {
         rootnodeOwner = await ensRegistry.owner(authDotEthNode)
         assert.equal(rootnodeOwner, newAuthereumEnsManager.address)
         expectEvent.inLogs(logs, 'RootnodeOwnerChanged', { rootnode: authDotEthNode, newOwner: newAuthereumEnsManager.address })
-      });
-    });
+      })
+    })
     context('Non-Happy Path', async () => {
       it('Should not allow an arbitrary actor to update the rootnode owner', async () => {
         await expectRevert(authereumEnsManager.changeRootnodeOwner(AUTH_KEYS[0], { from: AUTH_KEYS[0] }), constants.REVERT_MSG.GENERAL_REVERT)
-      });
+      })
       it('Should not allow the rootnode owner to be set to 0', async () => {
         await expectRevert(authereumEnsManager.changeRootnodeOwner(constants.ZERO_ADDRESS, { from: AUTHEREUM_OWNER  }), constants.REVERT_MSG.AEM_ADDRESS_MUST_NOT_BE_NULL)
-      });
-    });
-  });
+      })
+    })
+  })
   describe('changeRootnodeResolver', () => {
     context('Happy Path', async () => {
       it('Should update the resolver of the rootNode from the manager address to a new resolver', async () => {
@@ -216,17 +264,17 @@ contract('AuthereumEnsManager', function (accounts) {
         rootnodeResolver = await ensRegistry.resolver(authDotEthNode)
         assert.equal(rootnodeResolver, newAuthereumEnsResolver.address)
         expectEvent.inLogs(logs, 'RootnodeResolverChanged', { rootnode: authDotEthNode, newResolver: newAuthereumEnsResolver.address })
-      });
-    });
+      })
+    })
     context('Non-Happy Path', async () => {
       it('Should not allow an arbitrary actor to update the rootnode resolver', async () => {
         await expectRevert(authereumEnsManager.changeRootnodeResolver(AUTH_KEYS[0], { from: AUTH_KEYS[0] }), constants.REVERT_MSG.GENERAL_REVERT)
-      });
+      })
       it('Should not allow the rootnode resolver to be set to 0', async () => {
         await expectRevert(authereumEnsManager.changeRootnodeResolver(constants.ZERO_ADDRESS, { from: AUTHEREUM_OWNER  }), constants.REVERT_MSG.AEM_ADDRESS_MUST_NOT_BE_NULL)
-      });
-    });
-  });
+      })
+    })
+  })
   describe('changeRootnodeTTL', () => {
     context('Happy Path', async () => {
       it('Should update the TTL of the rootNode from the 0 to 1', async () => {
@@ -239,14 +287,14 @@ contract('AuthereumEnsManager', function (accounts) {
         rootnodeTtl = await ensRegistry.ttl(authDotEthNode)
         assert.equal(rootnodeTtl, '1')
         expectEvent.inLogs(logs, 'RootnodeTTLChanged', { rootnode: authDotEthNode, newTtl: '1'})
-      });
-    });
+      })
+    })
     context('Non-Happy Path', async () => {
       it('Should not allow an arbitrary actor to update the rootnode ttl', async () => {
         await expectRevert(authereumEnsManager.changeRootnodeTTL(1, { from: AUTH_KEYS[0] }), constants.REVERT_MSG.GENERAL_REVERT)
-      });
-    });
-  });
+      })
+    })
+  })
   describe("changeRootnodeText", () => {
     context('Happy Path', async () => {
       it("Should update the text record of the rootNode from the 0 to the default key and value", async () => {
@@ -259,14 +307,14 @@ contract('AuthereumEnsManager', function (accounts) {
         rootnodeText = await authereumEnsResolver.text(authDotEthNode, defaultTextKey)
         assert.equal(rootnodeText, defaultTextValue)
         expectEvent.inLogs(logs, 'RootnodeTextChanged', { node: authDotEthNode, indexedKey: defaultTextKeyIndexed, key: defaultTextKey, value: defaultTextValue })
-      });
-    });
+      })
+    })
     context('Non-Happy Path', async () => {
       it("Should not allow an arbitrary actor to update the rootnode text", async () => {
         await expectRevert(authereumEnsManager.changeRootnodeText(defaultTextKey, defaultTextValue, { from: AUTH_KEYS[0] }), constants.REVERT_MSG.GENERAL_REVERT)
-      });
-    });
-  });
+      })
+    })
+  })
   describe("changeRootnodeContenthash", () => {
     context('Happy Path', async () => {
       it("Should update the contenthash of the rootNode from the null to the default contenthash", async () => {
@@ -279,30 +327,30 @@ contract('AuthereumEnsManager', function (accounts) {
         letRootnodeContenthash = await authereumEnsResolver.contenthash(authDotEthNode)
         assert.equal(letRootnodeContenthash, defaultContenthashHex)
         expectEvent.inLogs(logs, 'RootnodeContenthashChanged', { node: authDotEthNode, hash: defaultContenthashHex })
-      });
-    });
+      })
+    })
     context('Non-Happy Path', async () => {
       it("Should not allow an arbitrary actor to update the rootnode contenthash", async () => {
         await expectRevert(authereumEnsManager.changeRootnodeContenthash(defaultContenthashBytes, { from: AUTH_KEYS[0] }), constants.REVERT_MSG.GENERAL_REVERT)
-      });
-    });
-  });
+      })
+    })
+  })
   describe("changeAuthereumFactoryAddress", () => {
     context('Happy Path', async () => {
       it('Should update the owner of the Autherereum Factory address to a new Authereum Factory address', async () => {
         var { logs } = await authereumEnsManager.changeAuthereumFactoryAddress(NEW_PROXY_FACTORY, { from: AUTHEREUM_OWNER })
         expectEvent.inLogs(logs, 'AuthereumFactoryAddressChanged', { authereumFactoryAddress: NEW_PROXY_FACTORY })
-      });
-    });
+      })
+    })
     context('Non-Happy Path', async () => {
       it('Should not allow an arbitrary actor to update the Authereum Factory address', async () => {
         await expectRevert(authereumEnsManager.changeAuthereumFactoryAddress(NEW_PROXY_FACTORY, { from: AUTH_KEYS[0] }), constants.REVERT_MSG.GENERAL_REVERT)
-      });
+      })
       it('Should not allow the Authereum Factory address to be set to 0', async () => {
         await expectRevert(authereumEnsManager.changeAuthereumFactoryAddress(constants.ZERO_ADDRESS, { from: AUTHEREUM_OWNER }), constants.REVERT_MSG.GENERAL_REVERT)
-      });
-    });
-  });
+      })
+    })
+  })
   describe("changeAuthereumEnsResolver", () => {
     context('Happy Path', async () => {
       it('Should update the owner of the ENS Resolver address to a new ENS Resolver address', async () => {
@@ -315,18 +363,18 @@ contract('AuthereumEnsManager', function (accounts) {
         resolverAddress = await authereumEnsManager.authereumEnsResolver()
         assert.equal(resolverAddress, newAuthereumEnsResolver.address)
         expectEvent.inLogs(logs, 'AuthereumEnsResolverChanged', { authereumEnsResolver: newAuthereumEnsResolver.address })
-      });
-    });
+      })
+    })
     context('Non-Happy Path', async () => {
       it("Should not allow an arbitrary actor to update the ENS Resolver address", async () => {
         await expectRevert(authereumEnsManager.changeAuthereumEnsResolver(AUTH_KEYS[0], { from: AUTH_KEYS[0] }), constants.REVERT_MSG.GENERAL_REVERT)
-      });
+      })
       it('Should not allow the new ENS resolver address to be set to 0', async () => {
         const newAuthereumEnsResolver = await AuthereumEnsResolver.new(ensRegistry.address, timelockContractAddress, { from: AUTHEREUM_OWNER })
         await expectRevert(authereumEnsManager.changeAuthereumEnsResolver(constants.ZERO_ADDRESS, { from: AUTHEREUM_OWNER }), constants.REVERT_MSG.GENERAL_REVERT)
-      });
-    });
-  });
+      })
+    })
+  })
   describe('Register', () => {
     context('Happy Path', async () => {
       it('Should let a user register test.auth.eth', async () => {
@@ -348,7 +396,7 @@ contract('AuthereumEnsManager', function (accounts) {
         const reverseTestDotauthDotEthNode = await utils.getReverseNode(create2Address)
         const name = await authereumEnsResolver.name(reverseTestDotauthDotEthNode)
         assert.equal(name, testDotauthDotEthDomain, 'The test.auth.eth name was not set correcly')
-      });
+      })
       it('Should let a user register test.auth.eth and another user to register testtwo.auth.eth', async () => {
         // First user
         let proxyCodeAndConstructorHash = await utils.calculateProxyBytecodeAndConstructorHash(authereumAccountLogicContract.address)
@@ -358,7 +406,8 @@ contract('AuthereumEnsManager', function (accounts) {
 
         // Second user
         const _expectedSalt = constants.SALT + 10
-        const _saltHash = utils.getSaltHash(_expectedSalt, accounts[0])
+        const _initData = await utils.getAuthereumAccountCreationData(AUTH_KEYS[0])
+        const _saltHash = utils.getSaltHash(_expectedSalt, _initData)
         const _label = testtwoLabel
         create2Address = utils.buildCreate2Address(proxyFactoryAddress, _saltHash, proxyCodeAndConstructorHash)
         await utils.createProxy(
@@ -368,7 +417,7 @@ contract('AuthereumEnsManager', function (accounts) {
 
         owner = await ensRegistry.owner(testtwoDotauthDotEthNode);
         assert.equal(owner, create2Address, 'create2Address should be the owner of testtwo.auth.eth');
-      });
+      })
       // NOTE: This identical name will be normalized and blocked on the frontend
       it('Should let a user register test.auth.eth and another user register Test.auth.eth, but ownership will not change because namehash normalizes the names to be the same case', async () => {
         // First user
@@ -387,36 +436,36 @@ contract('AuthereumEnsManager', function (accounts) {
 
         owner = await ensRegistry.owner(namehash.hash('Test.auth.eth'));
         assert.equal(owner, create2Address, 'create2Address should be the owner of Test.auth.eth');
-      });
-    });
+      })
+    })
     context('Non-Happy Path', async () => {
       it('Should not allow a domain name to be registered more than once', async () => {
         await expectRevert(utils.createProxy(
           expectedSalt, accounts[0], authereumProxyFactoryLogicContract,
           AUTH_KEYS[0], label, authereumAccountLogicContract.address
         ), constants.REVERT_MSG.GENERAL_REVERT)
-      });
+      })
       it('Should not allow an non-authereumProxyFactory address to register an account', async () => {
         // Fail from an arbitrary address call
         await expectRevert(authereumEnsManager.register(testLabel, AUTH_KEYS[0], { from: accounts[0] }), constants.REVERT_MSG.AEM_MUST_SEND_FROM_FACTORY)
 
         // Fail from an Authereum owner call
         await expectRevert(authereumEnsManager.register(testLabel, AUTH_KEYS[0], { from: AUTHEREUM_OWNER }), constants.REVERT_MSG.AEM_MUST_SEND_FROM_FACTORY)
-      });
-    });
-  });
+      })
+    })
+  })
   describe('isAvailable', () => {
     context('Happy Path', async () => {
       it('Should return true if a subnode is available', async () => {
         let isTrue = await authereumEnsManager.isAvailable(unclaimedLabelHash, { from: AUTH_KEYS[0] })
         assert.equal(isTrue, true)
-      });
+      })
       it('Should return false if a subnode is not available', async () => {
         let isTrue = await authereumEnsManager.isAvailable(testHash, { from: AUTH_KEYS[0] })
         assert.equal(isTrue, false)
-      });
-    });
-  });
+      })
+    })
+  })
   describe('End to End', () => {
     context('Happy Path', async () => {
       it('Should update to a new manager and retain all qualities as before the upgrade', async () => {
@@ -445,7 +494,7 @@ contract('AuthereumEnsManager', function (accounts) {
         assert.equal(rootnodeOwner, newAuthereumEnsManager.address)
         assert.equal(rootnodeResolver, newAuthereumEnsResolver.address)
         assert.equal(rootnodeTtl, '1')
-      });
+      })
       it('Should update to a new manager and retain all qualities as before the upgrade, including users', async () => {
         // Get expected user address
         const proxyCodeAndConstructorHash = await utils.calculateProxyBytecodeAndConstructorHash(authereumAccountLogicContract.address)
@@ -512,7 +561,7 @@ contract('AuthereumEnsManager', function (accounts) {
         reverseTestDotauthDotEthNode = await utils.getReverseNode(create2Address)
         name = await authereumEnsResolver.name(reverseTestDotauthDotEthNode)
         assert.equal(name, testDotauthDotEthDomain, 'The test.auth.eth name was not set correcly')
-      });
-    });
-  });
-});
+      })
+    })
+  })
+})

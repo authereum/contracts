@@ -11,6 +11,9 @@ const ArtifactAuthereumProxy = artifacts.require('AuthereumProxy')
 const ArtifactAuthereumProxyFactory = artifacts.require('AuthereumProxyFactory')
 const ArtifactAuthereumProxyAccountUpgrade = artifacts.require('UpgradeAccount')
 const ArtifactAuthereumProxyAccountUpgradeWithInit = artifacts.require('UpgradeAccountWithInit')
+const ArtifactAuthereumRecoveryModule = artifacts.require('AuthereumRecoveryModule')
+const ArtifactReturnTransaction = artifacts.require('ReturnTransaction')
+const ArtifactERC1820Registry = artifacts.require('ERC1820Registry')
 
 contract('BaseMetaTxAccount', function (accounts) {
   const OWNER = accounts[0]
@@ -21,6 +24,7 @@ contract('BaseMetaTxAccount', function (accounts) {
   const LOGIN_KEYS = [accounts[10]]
 
   // Test Params
+  let beforeAllSnapshotId
   let snapshotId
 
   // Params
@@ -31,7 +35,7 @@ contract('BaseMetaTxAccount', function (accounts) {
   let expectedSalt
   let expectedCreationCodeHash
   let nonce
-  let destination
+  let to
   let value
   let gasLimit
   let data
@@ -57,14 +61,26 @@ contract('BaseMetaTxAccount', function (accounts) {
   let authereumProxyAccountUpgradeWithInitLogicContract
 
   // Contract Instances
+  let authereumRecoveryModule
   let authereumProxy
   let authereumProxyAccount
   let authereumProxyAccountUpgrade
-  let authereumProxyAccountUpgradeWithInitt
+  let authereumProxyAccountUpgradeWithInit
+  let erc1820Registry
 
   before(async () => {
     // Deploy Bad Contract
     badContract = await ArtifactBadTransaction.new()
+
+    // Take snapshot to reset to a known state
+    // This is required due to the deployment of the 1820 contract
+    beforeAllSnapshotId = await timeUtils.takeSnapshot()
+    
+    // Deploy the recovery module
+    authereumRecoveryModule = await ArtifactAuthereumRecoveryModule.new()
+
+    // Deploy the 1820 contract
+    await utils.deploy1820Contract(AUTHEREUM_OWNER)
 
     // Set up ENS defaults
     const { authereumEnsManager } = await utils.setENSDefaults(AUTHEREUM_OWNER)
@@ -74,7 +90,8 @@ contract('BaseMetaTxAccount', function (accounts) {
 
     // Create Logic Contracts
     authereumAccountLogicContract = await ArtifactAuthereumAccount.new()
-    authereumProxyFactoryLogicContract = await ArtifactAuthereumProxyFactory.new(authereumAccountLogicContract.address, authereumEnsManager.address)
+    const _proxyInitCode = await utils.calculateProxyBytecodeAndConstructor(authereumAccountLogicContract.address)
+    authereumProxyFactoryLogicContract = await ArtifactAuthereumProxyFactory.new(_proxyInitCode, authereumEnsManager.address)
     authereumProxyAccountUpgradeLogicContract = await ArtifactAuthereumProxyAccountUpgrade.new()
     authereumProxyAccountUpgradeWithInitLogicContract = await ArtifactAuthereumProxyAccountUpgradeWithInit.new()
 
@@ -91,25 +108,33 @@ contract('BaseMetaTxAccount', function (accounts) {
       AUTH_KEYS[0], label, authereumAccountLogicContract.address
     )
 
+    // Set up IERC1820 contract
+    erc1820Registry = await ArtifactERC1820Registry.at(constants.ERC1820_REGISTRY_ADDRESS)
+
     // Wrap in truffle-contract
     authereumProxy = await ArtifactAuthereumProxy.at(expectedAddress)
     authereumProxyAccount = await ArtifactAuthereumAccount.at(expectedAddress)
 
+    // Handle post-proxy deployment
+    await authereumProxyAccount.sendTransaction({ value:constants.TWO_ETHER, from: AUTH_KEYS[0] })
+    await utils.setAuthereumRecoveryModule(authereumProxyAccount, authereumRecoveryModule.address, AUTH_KEYS[0])
+    await utils.setAccountIn1820Registry(authereumProxyAccount, erc1820Registry.address, AUTH_KEYS[0])
+
     // Default transaction data
     nonce = await authereumProxyAccount.nonce()
     nonce = nonce.toNumber()
-    destination = RECEIVERS[0]
+    to = RECEIVERS[0]
     value = constants.ONE_ETHER
     gasLimit = constants.GAS_LIMIT
     data = '0x00'
     gasPrice = constants.GAS_PRICE
     gasOverhead = constants.DEFAULT_GAS_OVERHEAD
-    loginKeyRestrictionsData = constants.DEFAULT_LOGIN_KEY_RESTRICTIONS_DATA
+    loginKeyRestrictionsData = constants.DEFAULT_LOGIN_KEY_EXPIRATION_TIME_DATA
     feeTokenAddress = constants.ZERO_ADDRESS
     feeTokenRate = constants.DEFAULT_TOKEN_RATE
 
     // Convert to transactions array
-    encodedParameters = await utils.encodeTransactionParams(destination, value, gasLimit, data)
+    encodedParameters = await utils.encodeTransactionParams(to, value, gasLimit, data)
     transactions = [encodedParameters]
 
     // Get default signedMessageHash and signedLoginKey
@@ -128,14 +153,18 @@ contract('BaseMetaTxAccount', function (accounts) {
     loginKeyAttestationSignature = utils.getSignedLoginKey(LOGIN_KEYS[0], loginKeyRestrictionsData)
   })
 
+  after(async() => {
+    await timeUtils.revertSnapshot(beforeAllSnapshotId.result)
+  })
+
   // Take snapshot before each test and revert after each test
   beforeEach(async() => {
-    snapshotId = await timeUtils.takeSnapshot();
-  });
+    snapshotId = await timeUtils.takeSnapshot()
+  })
 
   afterEach(async() => {
-    await timeUtils.revertSnapshot(snapshotId.result);
-  });
+    await timeUtils.revertSnapshot(snapshotId.result)
+  })
 
   //**********//
   //  Tests  //
@@ -147,7 +176,7 @@ contract('BaseMetaTxAccount', function (accounts) {
         await authereumProxyAccount.send(constants.ONE_ETHER, {from: AUTH_KEYS[0]})
 
         const beforeRelayerBal = await balance.current(RELAYER)
-        const beforeDestinationBal = await balance.current(destination)
+        const beforeToBal = await balance.current(to)
         const beforeAccountBal = await balance.current(authereumProxyAccount.address)
 
         await authereumProxyAccount.executeMultipleMetaTransactions(
@@ -155,11 +184,11 @@ contract('BaseMetaTxAccount', function (accounts) {
         )
 
         const afterRelayerBal = await balance.current(RELAYER)
-        const afterDestinationBal = await balance.current(destination)
+        const afterToBal = await balance.current(to)
         const afterAccountBal = await balance.current(authereumProxyAccount.address)
 
-        // Destination address gains 1 ETH
-        assert.equal(afterDestinationBal - beforeDestinationBal, constants.ONE_ETHER)
+        // to address gains 1 ETH
+        assert.equal(afterToBal - beforeToBal, constants.ONE_ETHER)
         // CBA loses 1 ETH
         assert.equal(beforeAccountBal - afterAccountBal, constants.ONE_ETHER)
         // Transaction sent straight from AUTH_KEYS[0] so RELAYER loses nothing
@@ -169,14 +198,14 @@ contract('BaseMetaTxAccount', function (accounts) {
         await authereumProxyAccount.send(constants.TWO_ETHER, {from: AUTH_KEYS[0]})
 
         // Default transaction data
-        const _destination = RECEIVERS[1]
+        const _to = RECEIVERS[1]
 
         const beforeRelayerBal = await balance.current(RELAYER)
-        const beforeDestinationBal = await balance.current(destination)
-        const beforeDestination2Bal = await balance.current(_destination)
+        const beforeToBal = await balance.current(to)
+        const beforeTo2Bal = await balance.current(_to)
         const beforeAccountBal = await balance.current(authereumProxyAccount.address)
 
-        const _encodedParameters = await utils.encodeTransactionParams(_destination, value, gasLimit, data)
+        const _encodedParameters = await utils.encodeTransactionParams(_to, value, gasLimit, data)
         let _transactions = transactions.slice(0)
         _transactions.push(_encodedParameters)
 
@@ -185,18 +214,58 @@ contract('BaseMetaTxAccount', function (accounts) {
         )
 
         const afterRelayerBal = await balance.current(RELAYER)
-        const afterDestinationBal = await balance.current(destination)
-        const afterDestination2Bal = await balance.current(_destination)
+        const afterToBal = await balance.current(to)
+        const afterTo2Bal = await balance.current(_to)
         const afterAccountBal = await balance.current(authereumProxyAccount.address)
 
-        // Destination 1 address gains 1 ETH
-        assert.equal(afterDestinationBal - beforeDestinationBal, constants.ONE_ETHER)
-        // Destination 2 address gains 1 ETH
-        assert.equal(afterDestination2Bal - beforeDestination2Bal, constants.ONE_ETHER)
+        // to 1 address gains 1 ETH
+        assert.equal(afterToBal - beforeToBal, constants.ONE_ETHER)
+        // to 2 address gains 1 ETH
+        assert.equal(afterTo2Bal - beforeTo2Bal, constants.ONE_ETHER)
         // CBA loses 2 ETH
         assert.equal(beforeAccountBal - afterAccountBal, constants.TWO_ETHER)
         // Transaction sent straight from AUTH_KEYS[0] so RELAYER loses nothing
         assert.equal(beforeRelayerBal - afterRelayerBal, 0)
+      })
+      it('Should execute a transaction with complex input and return data', async () => {
+        // This test is used to test if the Authereum Proxy works without ABIEncoderV2
+        await authereumProxyAccount.send(constants.TWO_ETHER, {from: AUTH_KEYS[0]})
+
+        returnTransaction = await ArtifactReturnTransaction.new()
+
+        const returnTestFunction = {
+          name: 'returnTest2',
+          type: 'function',
+          inputs: [
+            {
+              type: 'uint256',
+              name: 'num1'
+            },
+            {
+              type: 'uint256',
+              name: 'num2'
+            }
+          ]
+        }
+
+        const _num1 = 1
+        const _num2 = 2
+        returnTransactionSelector = web3.eth.abi.encodeFunctionSignature(returnTestFunction)
+        returnTransactionData = web3.eth.abi.encodeFunctionCall(returnTestFunction, [_num1, _num2])
+
+        const _to = returnTransaction.address
+
+        const _encodedParameters = await utils.encodeTransactionParams(_to, value, gasLimit, returnTransactionData)
+        const _transactions = [_encodedParameters, _encodedParameters]
+
+        const tx = await authereumProxyAccount.executeMultipleMetaTransactions(
+          _transactions, { from: AUTH_KEYS[0] }
+        )
+
+        const _rawLogs = tx.receipt.rawLogs
+        const _expectedReturn = '0x00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000002'
+        assert.equal(_rawLogs[0].data, _expectedReturn)
+        assert.equal(_rawLogs[1].data, _expectedReturn)
       })
     })
     context('Non-Happy Path', async () => {
@@ -204,11 +273,11 @@ contract('BaseMetaTxAccount', function (accounts) {
           await authereumProxyAccount.send(constants.ONE_ETHER, {from: AUTH_KEYS[0]})
 
           // Generate bad tx data
-          const _destination = badContract.address
+          const _to = badContract.address
           const _data = constants.BAD_DATA
 
           // Convert to transactions array
-          const _encodedParameters = await utils.encodeTransactionParams(_destination, value, gasLimit, _data)
+          const _encodedParameters = await utils.encodeTransactionParams(_to, value, gasLimit, _data)
           const _transactions = [_encodedParameters]
 
           await expectRevert(authereumProxyAccount.executeMultipleMetaTransactions(

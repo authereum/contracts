@@ -1,4 +1,4 @@
-pragma solidity 0.5.16;
+pragma solidity 0.5.17;
 
 import "./BaseAccount.sol";
 import "../interfaces/IERC1271.sol";
@@ -82,7 +82,7 @@ contract ERC1271Account is IERC1271, BaseAccount {
         bytes memory msgHashSignature = _signature.slice(0, 65);
         bytes memory loginKeyAttestationSignature = _signature.slice(65, 65);
         uint256 restrictionDataLength = _signature.length.sub(130);
-        bytes memory loginKeyRestrictionData = _signature.slice(130, restrictionDataLength);
+        bytes memory loginKeyRestrictionsData = _signature.slice(130, restrictionDataLength);
 
         address _loginKeyAddress = _getEthSignedMessageHash(_data).recover(
             msgHashSignature
@@ -92,7 +92,7 @@ contract ERC1271Account is IERC1271, BaseAccount {
         // NOTE: because the length is hard coded at 32 and we know that this will always
         // NOTE: be true for this line.
         bytes32 loginKeyAttestationMessageHash = keccak256(abi.encode(
-            _loginKeyAddress, loginKeyRestrictionData
+            _loginKeyAddress, loginKeyRestrictionsData
         )).toEthSignedMessageHash();
 
         address _authKeyAddress = loginKeyAttestationMessageHash.recover(

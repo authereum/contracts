@@ -1,4 +1,4 @@
-pragma solidity 0.5.16;
+pragma solidity 0.5.17;
 
 import "../ens/AuthereumEnsResolver.sol";
 import "../base/Owned.sol";
@@ -12,7 +12,7 @@ contract ResetManager is Owned {
     event RootnodeOwnerChanged(bytes32 indexed rootnode, address indexed newOwner);
 
     /// @dev Constructor that sets the ENS root name and root node to manage
-    /// @param _rootNode The node of the root name (e.g. namehash(authereum.eth))
+    /// @param _rootNode The node of the root name (e.g. namehash(auth.eth))
     /// @param _ensRegistry Custom ENS Registry address
     constructor(
         bytes32 _rootNode,
