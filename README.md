@@ -85,10 +85,6 @@ The Authereum contracts support "module" contracts that can be used to introduce
 
 ## Additional Notes
 
-### Solidity Versions
-
-* The `AuthereumProxy.sol` will remain at version `0.5.16` so that the bytecode of the contract does not change. Other contracts that this contract interacts with can be upgraded.
-
 ### Known Issues
 
 * A user can break their upgradeability on the Authereum system by upgrading their account to a logic address outside of the Authereum ecosystem.
@@ -137,67 +133,135 @@ Design Decisions:
 
 ### Mainnet
 
-* Authereum Account v2020021700 = [0x20AF9E54a3670EF6a601bcA1f1EC22b1f93CBE23](https://etherscan.io/address/0x20AF9E54a3670EF6a601bcA1f1EC22b1f93CBE23)
-* Authereum Account v2020020200 = [0x2e1723d1DFa2947f0d08D5c5D214b71deF4f951F](https://etherscan.io/address/0x2e1723d1dfa2947f0d08d5c5d214b71def4f951f)
-* Authereum Account v2020010900 = [0x79fEe076B1BcD4054DFF0B4364C26899492198dc](https://etherscan.io/address/0x79fEe076B1BcD4054DFF0B4364C26899492198dc)
-* Authereum Account v2019122000 = [0x211deB5c0a28A213FcF5976Ac22c70fF96b9004C](https://etherscan.io/address/0x211deB5c0a28A213FcF5976Ac22c70fF96b9004C)
-* Authereum Account v2019111500 = [0x185c46c8d3EF5155F3678e69c827dB7a2116a6Cd](https://etherscan.io/address/0x185c46c8d3EF5155F3678e69c827dB7a2116a6Cd)
-* Authereum Account v2019102500 = [0xD8CaB604BDd8cBb7c3eb0c26f7DC3AbFfb005A92](https://etherscan.io/address/0xD8CaB604BDd8cBb7c3eb0c26f7DC3AbFfb005A92)
-
-<br>
-
-* Authereum ENS Manager v2019111500 = [0x9442A2Eff399a9e97BCC6B2a4194399496F76e59](https://etherscan.io/address/0x9442A2Eff399a9e97BCC6B2a4194399496F76e59)
-* Authereum ENS Manager v2019102500 = [0x6DCC6577650BBF5B70E9EeE7Cfd1364410867206](https://etherscan.io/address/0x6DCC6577650BBF5B70E9EeE7Cfd1364410867206)
-
-<br>
-
-* Authereum ENS Resolver v2019111500 = [0xA42D000187bd8d997df54267e4b27c08329fDFe1](https://etherscan.io/address/0xA42D000187bd8d997df54267e4b27c08329fDFe1)
-* Authereum ENS Resolver v2019102500 (v1.0.0)= [0xd54FFAb6df175a7751e6E50373d213242DE938c3](https://etherscan.io/address/0xd54FFAb6df175a7751e6E50373d213242DE938c3)
-
-<br>
-
-* Authereum ENS Resolver Proxy v2019111500 = [0x4DA86a24e30a188608E1364A2D262166a87fCB7C](https://etherscan.io/address/0x4DA86a24e30a188608E1364A2D262166a87fCB7C)
-
-<br>
-
-* Authereum Proxy Factory v2019111500 = [0x69c0047531FD1cc24dAa9Eccd221Cb66b53c63f8](https://etherscan.io/address/0x69c0047531FD1cc24dAa9Eccd221Cb66b53c63f8)
-* Authereum Proxy Factory v2019102500 = [0x0D54d0F1C1F5FE7a525713B85F36dE8fB6014046](https://etherscan.io/address/0x0D54d0F1C1F5FE7a525713B85F36dE8fB6014046)
+| Index | Contract Name | Contract Version | Address |
+|---|---|---|---|
+| 01 | Authereum Account             | 2020070100 | [0xe45a5176bC0F2c1198E2451C4e4501D4eD9B65a6](https://etherscan.io/address/0xe45a5176bC0F2c1198E2451C4e4501D4eD9B65a6)
+| 02 | Authereum Account             | 2020060100 | [0x237EDCDd43349227ef511581Cc834962ECf23076](https://etherscan.io/address/0x237EDCDd43349227ef511581Cc834962ECf23076)
+| 03 | Authereum Account             | 2020021700 | [0x20AF9E54a3670EF6a601bcA1f1EC22b1f93CBE23](https://etherscan.io/address/0x20AF9E54a3670EF6a601bcA1f1EC22b1f93CBE23)
+| 04 | Authereum Account             | 2020020200 | [0x2e1723d1DFa2947f0d08D5c5D214b71deF4f951F](https://etherscan.io/address/0x2e1723d1DFa2947f0d08D5c5D214b71deF4f951F)
+| 05 | Authereum Account             | 2020010900 | [0x79fEe076B1BcD4054DFF0B4364C26899492198dc](https://etherscan.io/address/0x79fEe076B1BcD4054DFF0B4364C26899492198dc)
+| 06 | Authereum Account             | 2019122000 | [0x211deB5c0a28A213FcF5976Ac22c70fF96b9004C](https://etherscan.io/address/0x211deB5c0a28A213FcF5976Ac22c70fF96b9004C)
+| 07 | Authereum Account             | 2019111500 | [0x185c46c8d3EF5155F3678e69c827dB7a2116a6Cd](https://etherscan.io/address/0x185c46c8d3EF5155F3678e69c827dB7a2116a6Cd)
+| 08 | Authereum Account             | 2019102500 | [0xD8CaB604BDd8cBb7c3eb0c26f7DC3AbFfb005A92](https://etherscan.io/address/0xD8CaB604BDd8cBb7c3eb0c26f7DC3AbFfb005A92)
+| 09 | Authereum ENS Manager         | 2020070100 | [0xcB586eA6F8804003e8B51832c8789B5aC9720d24](https://etherscan.io/address/0xcB586eA6F8804003e8B51832c8789B5aC9720d24)
+| 10 | Authereum ENS Manager         | 2020020200 | [0xd2dF497A03A67ebcF9c0Cf62E9165d52f634A2ae](https://etherscan.io/address/0xd2dF497A03A67ebcF9c0Cf62E9165d52f634A2ae)
+| 11 | Authereum ENS Manager         | 2019111500 | [0x9442A2Eff399a9e97BCC6B2a4194399496F76e59](https://etherscan.io/address/0x9442A2Eff399a9e97BCC6B2a4194399496F76e59)
+| 12 | Authereum ENS Manager         | 2019102500 | [0x6DCC6577650BBF5B70E9EeE7Cfd1364410867206](https://etherscan.io/address/0x6DCC6577650BBF5B70E9EeE7Cfd1364410867206)
+| 13 | Authereum ENS Resolver        | 2019111500 | [0xA42D000187bd8d997df54267e4b27c08329fDFe1](https://etherscan.io/address/0xA42D000187bd8d997df54267e4b27c08329fDFe1)
+| 14 | Authereum ENS Resolver        | 2019102500 | [0xd54FFAb6df175a7751e6E50373d213242DE938c3](https://etherscan.io/address/0xd54FFAb6df175a7751e6E50373d213242DE938c3)
+| 15 | Authereum ENS Resolver Proxy  | 2019111500 | [0x4DA86a24e30a188608E1364A2D262166a87fCB7C](https://etherscan.io/address/0x4DA86a24e30a188608E1364A2D262166a87fCB7C)
+| 16 | Authereum Proxy Factory       | 2020070100 | [0x260BA21bC0aE8DF6495FB0BC6de5d4d9B2814a1a](https://etherscan.io/address/0x260BA21bC0aE8DF6495FB0BC6de5d4d9B2814a1a) 
+| 17 | Authereum Proxy Factory       | 2019111500 | [0x69c0047531FD1cc24dAa9Eccd221Cb66b53c63f8](https://etherscan.io/address/0x69c0047531FD1cc24dAa9Eccd221Cb66b53c63f8) 
+| 18 | Authereum Proxy Factory       | 2019102500 | [0x0D54d0F1C1F5FE7a525713B85F36dE8fB6014046](https://etherscan.io/address/0x0D54d0F1C1F5FE7a525713B85F36dE8fB6014046) 
+| 19 | Authereum Delegate Key Module | 2020070100 | [0xCCfe999a3Bb7922A5F4595e5d5F95C43FFf0692E](https://etherscan.io/address/0xCCfe999a3Bb7922A5F4595e5d5F95C43FFf0692E)
+| 20 | Authereum Recovery Module     | 2020070100 | [0x891c1A794164C0DDaB3182c2b1b436b51B1F8B64](https://etherscan.io/address/0x891c1A794164C0DDaB3182c2b1b436b51B1F8B64)
+| 21 | Authereum Login Key Validator | 2020070100 | [0x4Af9d139B2E6739fd05fc5b9a06FA8B4df0A8d20](https://etherscan.io/address/0x4Af9d139B2E6739fd05fc5b9a06FA8B4df0A8d20)
+| 22 | ENS Registry                  | Public     | [0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e](https://etherscan.io/address/0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e)
+| 23 | ENS Reverse Registrar         | Public     | [0x9062C0A6Dbd6108336BcBe4593a3D1cE05512069](https://etherscan.io/address/0x9062C0A6Dbd6108336BcBe4593a3D1cE05512069)
 
 ### Kovan
 
-* Authereum Account v2020021700 = [0xD6A8E40C149aEA415DdC7a7F7743737Cd73e75a3](https://kovan.etherscan.io/address/0xD6A8E40C149aEA415DdC7a7F7743737Cd73e75a3)
-* Authereum Account v2020020200 = [0x090D1E26170e5Db316B9a86b0d61601285f463A3](https://kovan.etherscan.io/address/0x090D1E26170e5Db316B9a86b0d61601285f463A3)
-* Authereum Account v2020010900 = [0x024B110390FE302f6Ce1A2d81B9F3595B44179f4](https://kovan.etherscan.io/address/0x024B110390FE302f6Ce1A2d81B9F3595B44179f4)
-* Authereum Account v2019122000 = [0xF29a9ACE9820dB1E0C92AAE20D9e32C7ce34D6E6](https://kovan.etherscan.io/address/0xF29a9ACE9820dB1E0C92AAE20D9e32C7ce34D6E6)
-* Authereum Account v2019111500 = [0x8bb37aE005ADa8f7c1033843A7c7eB3004c64888](https://kovan.etherscan.io/address/0x8bb37aE005ADa8f7c1033843A7c7eB3004c64888)
-* Authereum Account v2019102500 = [0xFF8C7Ed14a7D3c3Cb0d62Ef001cAD39746642B33](https://kovan.etherscan.io/address/0xFF8C7Ed14a7D3c3Cb0d62Ef001cAD39746642B33)
+| Index | Contract Name | Contract Version | Address |
+|---|---|---|---|
+| 01 | Authereum Account             | 2020070100 | [0x5bD8b14f5F95b3f85Dab33e2281e936DDB5947a7](https://kovan.etherscan.io/address/0x5bD8b14f5F95b3f85Dab33e2281e936DDB5947a7)
+| 02 | Authereum Account             | 2020060100 | [0x2072694ce1C8352FEa2FBA5CbA54839a4b62cF87](https://kovan.etherscan.io/address/0x2072694ce1C8352FEa2FBA5CbA54839a4b62cF87)
+| 03 | Authereum Account             | 2020021700 | [0xD6A8E40C149aEA415DdC7a7F7743737Cd73e75a3](https://kovan.etherscan.io/address/0xD6A8E40C149aEA415DdC7a7F7743737Cd73e75a3)
+| 04 | Authereum Account             | 2020020200 | [0x090D1E26170e5Db316B9a86b0d61601285f463A3](https://kovan.etherscan.io/address/0x090D1E26170e5Db316B9a86b0d61601285f463A3)
+| 05 | Authereum Account             | 2020010900 | [0x024B110390FE302f6Ce1A2d81B9F3595B44179f4](https://kovan.etherscan.io/address/0x024B110390FE302f6Ce1A2d81B9F3595B44179f4)
+| 06 | Authereum Account             | 2019122000 | [0xF29a9ACE9820dB1E0C92AAE20D9e32C7ce34D6E6](https://kovan.etherscan.io/address/0xF29a9ACE9820dB1E0C92AAE20D9e32C7ce34D6E6)
+| 07 | Authereum Account             | 2019111500 | [0x8bb37aE005ADa8f7c1033843A7c7eB3004c64888](https://kovan.etherscan.io/address/0x8bb37aE005ADa8f7c1033843A7c7eB3004c64888)
+| 08 | Authereum Account             | 2019102500 | [0xFF8C7Ed14a7D3c3Cb0d62Ef001cAD39746642B33](https://kovan.etherscan.io/address/0xFF8C7Ed14a7D3c3Cb0d62Ef001cAD39746642B33)
+| 09 | Authereum ENS Manager         | 2020070100 | [0xAAb616857bB081006AE2C5E2C66e5422962F4FFF](https://kovan.etherscan.io/address/0xAAb616857bB081006AE2C5E2C66e5422962F4FFF)
+| 10 | Authereum ENS Manager         | 2019111500 | [0x907925001C35431b154CE607E16e10Da309861A4](https://kovan.etherscan.io/address/0x907925001C35431b154CE607E16e10Da309861A4)
+| 11 | Authereum ENS Manager         | 2019102500 | [0x1e397332f1e171CE06F37184f545Ef6B948278d5](https://kovan.etherscan.io/address/0x1e397332f1e171CE06F37184f545Ef6B948278d5)
+| 12 | Authereum ENS Resolver        | 2019111500 | [0x05d104DA15491946c304987964D9B6bab6e38a12](https://kovan.etherscan.io/address/0x05d104DA15491946c304987964D9B6bab6e38a12)
+| 13 | Authereum ENS Resolver        | 2019102500 | [0xb2eb9eb62C741f7Ee17f022A1132394ba5002e02](https://kovan.etherscan.io/address/0xb2eb9eb62C741f7Ee17f022A1132394ba5002e02)
+| 14 | Authereum Proxy Factory       | 2020070100 | [0xdFa2b3Cc9258D26bb594514BbEc26F378004ED50](https://kovan.etherscan.io/address/0xdFa2b3Cc9258D26bb594514BbEc26F378004ED50) 
+| 15 | Authereum Proxy Factory       | 2019111500 | [0x8C88C40bDEb6ad9cB5f1Fcc9B7e7C7Dc575bA1AB](https://kovan.etherscan.io/address/0x8C88C40bDEb6ad9cB5f1Fcc9B7e7C7Dc575bA1AB) 
+| 16 | Authereum Proxy Factory       | 2019102500 | [0xef6738bDe15085294edACd337F616F7Bc6adCD73](https://kovan.etherscan.io/address/0xef6738bDe15085294edACd337F616F7Bc6adCD73) 
+| 17 | Authereum Delegate Key Module | 2020070100 | [0x3306adF7DD266FBadADE35380DD2e884A5ccE344](https://kovan.etherscan.io/address/0x3306adF7DD266FBadADE35380DD2e884A5ccE344)
+| 18 | Authereum Recovery Module     | 2020070100 | [0x03D038BFD70af73496A6DD7631cC39f2183A383F](https://kovan.etherscan.io/address/0x03D038BFD70af73496A6DD7631cC39f2183A383F)
+| 19 | Authereum Login Key Validator | 2020070100 | [0x50a600111AFf466E96B280F04d8107F1E0cC8BF8](https://kovan.etherscan.io/address/0x50a600111AFf466E96B280F04d8107F1E0cC8BF8)
+| 20 | ENS Registry                  | Public     | [0xb794A9c50a132f3Eb3Cee5f5e927f6F4D1420B70](https://kovan.etherscan.io/address/0xb794A9c50a132f3Eb3Cee5f5e927f6F4D1420B70)
+| 21 | ENS Reverse Registrar         | Public     | [0xB84F94d5bf1ef3a117bA3B00F53f9b546E1f3baa](https://kovan.etherscan.io/address/0xB84F94d5bf1ef3a117bA3B00F53f9b546E1f3baa)
 
 ### Goerli
 
-* Authereum Account v2020021700 = [0xD6A8E40C149aEA415DdC7a7F7743737Cd73e75a3](https://goerli.etherscan.io/address/0xD6A8E40C149aEA415DdC7a7F7743737Cd73e75a3)
-* Authereum Account v2020020200 = [0xc023d33c49c5BF521fd24Ea3cd43563335813b9C](https://goerli.etherscan.io/address/0xc023d33c49c5BF521fd24Ea3cd43563335813b9C)
-* Authereum Account v2020010900 = [0x7E4624F2E1C365F0f800F46c2DBfE6b62F2f4383](https://goerli.etherscan.io/address/0x7E4624F2E1C365F0f800F46c2DBfE6b62F2f4383)
-* Authereum Account v2019122000 = [0x41FeB8e32C07d83FcCe95cc03e77Fb0938006E1E](https://goerli.etherscan.io/address/0x41FeB8e32C07d83FcCe95cc03e77Fb0938006E1E)
-* Authereum Account v2019111500 = [0x16766E4a74433c359D8d2F31F84a6eB6d3F4d7B3](https://goerli.etherscan.io/address/0x16766E4a74433c359D8d2F31F84a6eB6d3F4d7B3)
-* Authereum Account v2019102500 = [0x1d445c2B2F78e81B62bec0793D9823B462858651](https://goerli.etherscan.io/address/0x1d445c2B2F78e81B62bec0793D9823B462858651)
+| Index | Contract Name | Contract Version | Address |
+|---|---|---|---|
+| 01 | Authereum Account             | 2020070100 | [0x5D2fE97854770739e3e1F26CdE234Ac0EEF2f8C9](https://goerli.etherscan.io/address/0x5D2fE97854770739e3e1F26CdE234Ac0EEF2f8C9)
+| 02 | Authereum Account             | 2020060100 | [0x7141C7C9aAA6BdDa07a646E446461c2D32907B46](https://goerli.etherscan.io/address/0x7141C7C9aAA6BdDa07a646E446461c2D32907B46)
+| 03 | Authereum Account             | 2020021700 | [0xD6A8E40C149aEA415DdC7a7F7743737Cd73e75a3](https://goerli.etherscan.io/address/0xD6A8E40C149aEA415DdC7a7F7743737Cd73e75a3)
+| 04 | Authereum Account             | 2020020200 | [0xc023d33c49c5BF521fd24Ea3cd43563335813b9C](https://goerli.etherscan.io/address/0xc023d33c49c5BF521fd24Ea3cd43563335813b9C)
+| 05 | Authereum Account             | 2020010900 | [0x7E4624F2E1C365F0f800F46c2DBfE6b62F2f4383](https://goerli.etherscan.io/address/0x7E4624F2E1C365F0f800F46c2DBfE6b62F2f4383)
+| 06 | Authereum Account             | 2019122000 | [0x41FeB8e32C07d83FcCe95cc03e77Fb0938006E1E](https://goerli.etherscan.io/address/0x41FeB8e32C07d83FcCe95cc03e77Fb0938006E1E)
+| 07 | Authereum Account             | 2019111500 | [0x16766E4a74433c359D8d2F31F84a6eB6d3F4d7B3](https://goerli.etherscan.io/address/0x16766E4a74433c359D8d2F31F84a6eB6d3F4d7B3)
+| 08 | Authereum Account             | 2019102500 | [0x1d445c2B2F78e81B62bec0793D9823B462858651](https://goerli.etherscan.io/address/0x1d445c2B2F78e81B62bec0793D9823B462858651)
+| 09 | Authereum ENS Manager         | 2020070100 | [0x1Deb8B4354415C763a6ade1CEe8cDA92d2E434e9](https://goerli.etherscan.io/address/0x1Deb8B4354415C763a6ade1CEe8cDA92d2E434e9)
+| 10 | Authereum ENS Manager         | 2019111500 | [0xFf04927cab4a86a459A9D619FA5BF1B8a7015256](https://goerli.etherscan.io/address/0xFf04927cab4a86a459A9D619FA5BF1B8a7015256)
+| 11 | Authereum ENS Manager         | 2019102500 | [0xbCB45bC4E0Ec6363B78CF28Eb60D06B2e94B7206](https://goerli.etherscan.io/address/0xbCB45bC4E0Ec6363B78CF28Eb60D06B2e94B7206)
+| 12 | Authereum ENS Resolver        | 2019111500 | [0x796E0bcA1E75A23bc01CC714c7B67f12B945Dc0f](https://goerli.etherscan.io/address/0x796E0bcA1E75A23bc01CC714c7B67f12B945Dc0f)
+| 13 | Authereum ENS Resolver        | 2019102500 | [0xb4D7b5c4f6A6d335876aE3df4C80e0E3B78462D6](https://goerli.etherscan.io/address/0xb4D7b5c4f6A6d335876aE3df4C80e0E3B78462D6)
+| 14 | Authereum Proxy Factory       | 2020070100 | [0x4636e9dc617D132596634f07Ec17EeB662b1dF00](https://goerli.etherscan.io/address/0x4636e9dc617D132596634f07Ec17EeB662b1dF00) 
+| 15 | Authereum Proxy Factory       | 2019111500 | [0xd6FA6Bea6950288710101090b625a1d3b33a73c3](https://goerli.etherscan.io/address/0xd6FA6Bea6950288710101090b625a1d3b33a73c3) 
+| 16 | Authereum Proxy Factory       | 2019102500 | [0x5C9E807Cbd3430d64C2e23f51eC8CF4b65aa3805](https://goerli.etherscan.io/address/0x5C9E807Cbd3430d64C2e23f51eC8CF4b65aa3805) 
+| 17 | Authereum Delegate Key Module | 2020070100 | [0x907925001C35431b154CE607E16e10Da309861A4](https://goerli.etherscan.io/address/0x907925001C35431b154CE607E16e10Da309861A4)
+| 18 | Authereum Recovery Module     | 2020070100 | [0x90A56F8921954119b1a84FEC14577D8285500cE1](https://goerli.etherscan.io/address/0x90A56F8921954119b1a84FEC14577D8285500cE1)
+| 19 | Authereum Login Key Validator | 2020070100 | [0x50a600111AFf466E96B280F04d8107F1E0cC8BF8](https://goerli.etherscan.io/address/0x50a600111AFf466E96B280F04d8107F1E0cC8BF8)
+| 20 | ENS Registry                  | Public     | [0xFe25cd5cDFbb8d031Df5b6Ba97365b3A125ca504](https://goerli.etherscan.io/address/0xFe25cd5cDFbb8d031Df5b6Ba97365b3A125ca504)
+| 21 | ENS Reverse Registrar         | Public     | [0x5728ABcBaf1B94E1a89C2a5403B179ee6A0F51f6](https://goerli.etherscan.io/address/0x5728ABcBaf1B94E1a89C2a5403B179ee6A0F51f6)
 
 ### Rinkeby
 
-* Authereum Account v2020021700 = [0x4636e9dc617D132596634f07Ec17EeB662b1dF00](https://rinkeby.etherscan.io/address/0x4636e9dc617D132596634f07Ec17EeB662b1dF00)
-* Authereum Account v2020020200 = [0x679785fA2fB8A71206A161D1DA79Dbf762332019](https://rinkeby.etherscan.io/address/0x679785fA2fB8A71206A161D1DA79Dbf762332019)
-* Authereum Account v2020010900 = [0x7F9E8B9203cb2718F38Ac61109DC63C68986084E](https://rinkeby.etherscan.io/address/0x7F9E8B9203cb2718F38Ac61109DC63C68986084E)
-* Authereum Account v2019122000 = [0xCC44F31717aE06390Eefe6320D05bcf1d95E15CE](https://rinkeby.etherscan.io/address/0xCC44F31717aE06390Eefe6320D05bcf1d95E15CE)
-* Authereum Account v2019111500 = [0xC157873c86D78b7151670fbaB4C163383a164355](https://rinkeby.etherscan.io/address/0xC157873c86D78b7151670fbaB4C163383a164355)
-* Authereum Account v2019102500 = [0x0f95c1bfD98FeB165ab3B018d5DC770c27a3346e](https://rinkeby.etherscan.io/address/0x0f95c1bfD98FeB165ab3B018d5DC770c27a3346e)
+| Index | Contract Name | Contract Version | Address |
+|---|---|---|---|
+| 01 | Authereum Account             | 2020070100 | [0xE222D26708c646991Dc8685f5EDc62643514Efc4](https://rinkeby.etherscan.io/address/0xE222D26708c646991Dc8685f5EDc62643514Efc4)
+| 02 | Authereum Account             | 2020060100 | [0x05a17e0aD6238c6fB0bB08Aa6a7e5AFC7A9266e9](https://rinkeby.etherscan.io/address/0x05a17e0aD6238c6fB0bB08Aa6a7e5AFC7A9266e9)
+| 03 | Authereum Account             | 2020021700 | [0x4636e9dc617D132596634f07Ec17EeB662b1dF00](https://rinkeby.etherscan.io/address/0x4636e9dc617D132596634f07Ec17EeB662b1dF00)
+| 04 | Authereum Account             | 2020020200 | [0x679785fA2fB8A71206A161D1DA79Dbf762332019](https://rinkeby.etherscan.io/address/0x679785fA2fB8A71206A161D1DA79Dbf762332019)
+| 05 | Authereum Account             | 2020010900 | [0x7F9E8B9203cb2718F38Ac61109DC63C68986084E](https://rinkeby.etherscan.io/address/0x7F9E8B9203cb2718F38Ac61109DC63C68986084E)
+| 06 | Authereum Account             | 2019122000 | [0xCC44F31717aE06390Eefe6320D05bcf1d95E15CE](https://rinkeby.etherscan.io/address/0xCC44F31717aE06390Eefe6320D05bcf1d95E15CE)
+| 07 | Authereum Account             | 2019111500 | [0xC157873c86D78b7151670fbaB4C163383a164355](https://rinkeby.etherscan.io/address/0xC157873c86D78b7151670fbaB4C163383a164355)
+| 08 | Authereum Account             | 2019102500 | [0x0f95c1bfD98FeB165ab3B018d5DC770c27a3346e](https://rinkeby.etherscan.io/address/0x0f95c1bfD98FeB165ab3B018d5DC770c27a3346e)
+| 09 | Authereum ENS Manager         | 2020070100 | [0x89aB9fEBF7D9b3cc55d36b8616994B5cC8C20832](https://rinkeby.etherscan.io/address/0x89aB9fEBF7D9b3cc55d36b8616994B5cC8C20832)
+| 10 | Authereum ENS Manager         | 2019111500 | [0x4C37952d749948B6F4C8A135EFfa4d5038b62577](https://rinkeby.etherscan.io/address/0x4C37952d749948B6F4C8A135EFfa4d5038b62577)
+| 11 | Authereum ENS Manager         | 2019102500 | [0x86Ae991f87a5d0C132C5A222117b6B19eAf67967](https://rinkeby.etherscan.io/address/0x86Ae991f87a5d0C132C5A222117b6B19eAf67967)
+| 12 | Authereum ENS Resolver        | 2019111500 | [0x690a5BbF31657f7713f4c25B1b5f5c57E2B5fEFF](https://rinkeby.etherscan.io/address/0x690a5BbF31657f7713f4c25B1b5f5c57E2B5fEFF)
+| 13 | Authereum ENS Resolver        | 2019102500 | [0x2268C358fb636896913ADc2187BEb054C2E66199](https://rinkeby.etherscan.io/address/0x2268C358fb636896913ADc2187BEb054C2E66199)
+| 14 | Authereum Proxy Factory       | 2020070100 | [0x4Dad098187ec81dDebB9BD3f7FbE10408e32F292](https://rinkeby.etherscan.io/address/0x4Dad098187ec81dDebB9BD3f7FbE10408e32F292) 
+| 15 | Authereum Proxy Factory       | 2019111500 | [0x82931636003B155b7e08aD9519DCec0280FBe4C5](https://rinkeby.etherscan.io/address/0x82931636003B155b7e08aD9519DCec0280FBe4C5) 
+| 16 | Authereum Proxy Factory       | 2019102500 | [0xb05e3F5DdECABAadc3b02A9259DB0CBD9656aFbB](https://rinkeby.etherscan.io/address/0xb05e3F5DdECABAadc3b02A9259DB0CBD9656aFbB) 
+| 17 | Authereum Delegate Key Module | 2020070100 | [0x03D038BFD70af73496A6DD7631cC39f2183A383F](https://rinkeby.etherscan.io/address/0x03D038BFD70af73496A6DD7631cC39f2183A383F)
+| 18 | Authereum Recovery Module     | 2020070100 | [0x04C47f60AA9b4F69b054cAF57D673D1697375282](https://rinkeby.etherscan.io/address/0x04C47f60AA9b4F69b054cAF57D673D1697375282)
+| 19 | Authereum Login Key Validator | 2020070100 | [0x7141C7C9aAA6BdDa07a646E446461c2D32907B46](https://rinkeby.etherscan.io/address/0x7141C7C9aAA6BdDa07a646E446461c2D32907B46)
+| 20 | ENS Registry                  | Public     | [0x5Ed073f8669Ea5145D43B199F59c4CB44acBBAd1](https://rinkeby.etherscan.io/address/0x5Ed073f8669Ea5145D43B199F59c4CB44acBBAd1)
+| 21 | ENS Reverse Registrar         | Public     | [0xd860Da7b9600f4A24eE7228260744D385e22B389](https://rinkeby.etherscan.io/address/0xd860Da7b9600f4A24eE7228260744D385e22B389)
 
 ### Ropsten
 
-* Authereum Account v2020021700 = [0x4636e9dc617D132596634f07Ec17EeB662b1dF00](https://ropsten.etherscan.io/address/0x4636e9dc617D132596634f07Ec17EeB662b1dF00)
-* Authereum Account v2020020200 = [0x87413A03aa58635530990fBB5ea4D0E1818D2328](https://ropsten.etherscan.io/address/0x87413A03aa58635530990fBB5ea4D0E1818D2328)
-* Authereum Account v2020010900 = [0x8A5580515fe1413e08a71D87eEB70C037972363b](https://ropsten.etherscan.io/address/0x8A5580515fe1413e08a71D87eEB70C037972363b)
-* Authereum Account v2019122000 = [0x13A56BdF8EdCB80a8995BF8B50F248429Eb4179f](https://ropsten.etherscan.io/address/0x13A56BdF8EdCB80a8995BF8B50F248429Eb4179f)
-* Authereum Account v2019111500 = [0x5811DD6b41942b7B6c9C65887a80214203f23Ed3](https://ropsten.etherscan.io/address/0x5811DD6b41942b7B6c9C65887a80214203f23Ed3)
-* Authereum Account v2019102500 = [0x3D1F792509293abCb451316C9f52dDA6482604e4](https://ropsten.etherscan.io/address/0x3D1F792509293abCb451316C9f52dDA6482604e4)
+| Index | Contract Name | Contract Version | Address |
+|---|---|---|---|
+| 01 | Authereum Account             | 2020070100 | [0x5bD8b14f5F95b3f85Dab33e2281e936DDB5947a7](https://ropsten.etherscan.io/address/0x5bD8b14f5F95b3f85Dab33e2281e936DDB5947a7)
+| 02 | Authereum Account             | 2020060100 | [0x3ADc2cF2354380CBe022BcE532A14c78EAcae6bA](https://ropsten.etherscan.io/address/0x3ADc2cF2354380CBe022BcE532A14c78EAcae6bA)
+| 03 | Authereum Account             | 2020021700 | [0x4636e9dc617D132596634f07Ec17EeB662b1dF00](https://ropsten.etherscan.io/address/0x4636e9dc617D132596634f07Ec17EeB662b1dF00)
+| 04 | Authereum Account             | 2020020200 | [0x87413A03aa58635530990fBB5ea4D0E1818D2328](https://ropsten.etherscan.io/address/0x87413A03aa58635530990fBB5ea4D0E1818D2328)
+| 05 | Authereum Account             | 2020010900 | [0x8A5580515fe1413e08a71D87eEB70C037972363b](https://ropsten.etherscan.io/address/0x8A5580515fe1413e08a71D87eEB70C037972363b)
+| 06 | Authereum Account             | 2019122000 | [0x13A56BdF8EdCB80a8995BF8B50F248429Eb4179f](https://ropsten.etherscan.io/address/0x13A56BdF8EdCB80a8995BF8B50F248429Eb4179f)
+| 07 | Authereum Account             | 2019111500 | [0x5811DD6b41942b7B6c9C65887a80214203f23Ed3](https://ropsten.etherscan.io/address/0x5811DD6b41942b7B6c9C65887a80214203f23Ed3)
+| 08 | Authereum Account             | 2019102500 | [0x3D1F792509293abCb451316C9f52dDA6482604e4](https://ropsten.etherscan.io/address/0x3D1F792509293abCb451316C9f52dDA6482604e4)
+| 09 | Authereum ENS Manager         | 2020070100 | [0x36eD94B328F583639dB3114b2fDa23f99C38a9A5](https://ropsten.etherscan.io/address/0x36eD94B328F583639dB3114b2fDa23f99C38a9A5)
+| 10 | Authereum ENS Manager         | 2019111500 | [0x37F6c27C72819Cf800A75F3f3FC0cf3BA719Bf40](https://ropsten.etherscan.io/address/0x37F6c27C72819Cf800A75F3f3FC0cf3BA719Bf40)
+| 11 | Authereum ENS Manager         | 2019102500 | [0x5dafd0015D8E2583FFB5262b1537f614AD8c07A0](https://ropsten.etherscan.io/address/0x5dafd0015D8E2583FFB5262b1537f614AD8c07A0)
+| 12 | Authereum ENS Resolver        | 2019111500 | [0x82957328C8518eBf930101E8e6611c137F985B3B](https://ropsten.etherscan.io/address/0x82957328C8518eBf930101E8e6611c137F985B3B)
+| 13 | Authereum ENS Resolver        | 2019102500 | [0x9205a60C0A930311C3aF1c7738180706B5609CD9](https://ropsten.etherscan.io/address/0x9205a60C0A930311C3aF1c7738180706B5609CD9)
+| 14 | Authereum Proxy Factory       | 2020070100 | [0x90A56F8921954119b1a84FEC14577D8285500cE1](https://ropsten.etherscan.io/address/0x90A56F8921954119b1a84FEC14577D8285500cE1) 
+| 15 | Authereum Proxy Factory       | 2019111500 | [0x01068575e9796e680913401B5a72b24E9e1d7ba2](https://ropsten.etherscan.io/address/0x01068575e9796e680913401B5a72b24E9e1d7ba2) 
+| 16 | Authereum Proxy Factory       | 2019102500 | [0x601581e5C007fA944c3B53124B2E3de466d2D768](https://ropsten.etherscan.io/address/0x601581e5C007fA944c3B53124B2E3de466d2D768) 
+| 17 | Authereum Delegate Key Module | 2020070100 | [0x3306adF7DD266FBadADE35380DD2e884A5ccE344](https://ropsten.etherscan.io/address/0x3306adF7DD266FBadADE35380DD2e884A5ccE344)
+| 18 | Authereum Recovery Module     | 2020070100 | [0x03D038BFD70af73496A6DD7631cC39f2183A383F](https://ropsten.etherscan.io/address/0x03D038BFD70af73496A6DD7631cC39f2183A383F)
+| 19 | Authereum Login Key Validator | 2020070100 | [0x932EC02d2ADB59B9ad705019098966Dd6DA20fF0](https://ropsten.etherscan.io/address/0x932EC02d2ADB59B9ad705019098966Dd6DA20fF0)
+| 20 | ENS Registry                  | Public     | [0xc84E335bB9F3c097D67d7AE3f10C16c0A171aD26](https://ropsten.etherscan.io/address/0xc84E335bB9F3c097D67d7AE3f10C16c0A171aD26)
+| 21 | ENS Reverse Registrar         | Public     | [0x4dcAcb91D04cA0f1FF1FE0eE321bd4582d674e40](https://ropsten.etherscan.io/address/0x4dcAcb91D04cA0f1FF1FE0eE321bd4582d674e40)
 
 ## Test
 
@@ -211,18 +275,13 @@ npm run ganache
 npm run test
 ```
 
-## A note about bytecode
-
-The Authereum proxy's should all share the same bytecode from 'Compiler version 0.5.12+commit.7709ece9'. All of these proxy's should have the following bytecode with the respective, padded logic contract address appended to it:
-`0x60806040526040516103753803806103758339818101604052610025919081019061006c565b60007f360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc60001b905081815550506100de565b600081519050610066816100c7565b92915050565b60006020828403121561007e57600080fd5b600061008c84828501610057565b91505092915050565b60006100a0826100a7565b9050919050565b600073ffffffffffffffffffffffffffffffffffffffff82169050919050565b6100d081610095565b81146100db57600080fd5b50565b610288806100ed6000396000f3fe6080604052600436106100295760003560e01c80635bea7d5d1461006e5780635c60da1b14610099575b600080369050141561003a5761006c565b60006100446100c4565b90503660008037600080366000845af43d6000803e8060008114610067573d6000f35b3d6000fd5b005b34801561007a57600080fd5b506100836100f5565b6040516100909190610191565b60405180910390f35b3480156100a557600080fd5b506100ae6100c4565b6040516100bb9190610176565b60405180910390f35b6000807f360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc60001b9050805491505090565b6040518060400160405280600a81526020017f323031393130323530300000000000000000000000000000000000000000000081525081565b610137816101cf565b82525050565b6000610148826101b3565b61015281856101be565b9350610162818560208601610201565b61016b81610234565b840191505092915050565b600060208201905061018b600083018461012e565b92915050565b600060208201905081810360008301526101ab818461013d565b905092915050565b600081519050919050565b600082825260208201905092915050565b60006101da826101e1565b9050919050565b600073ffffffffffffffffffffffffffffffffffffffff82169050919050565b60005b8381101561021f578082015181840152602081019050610204565b8381111561022e576000848401525b50505050565b6000601f19601f830116905091905056fea365627a7a72315820df4401333fb8c26a38547c751ff4c528d95f9c5a191e6bc81f110b41250720046c6578706572696d656e74616cf564736f6c634300050c0040`
-
 ## Changelog
 
 ### Authereum Account
 
 #### 2020070100
 
-  This update was a routine update to prepare for another audit by G0 Group.
+  This update introduces a number of new features and cleans up existing code. It was audited by G0 Group.
 
   **General**
   * Update contract to Solidity 0.5.17
@@ -242,20 +301,31 @@ The Authereum proxy's should all share the same bytecode from 'Compiler version 
   * Convert `authereumVersion` to `version`
   * Add `implementation()`
   * Add `implementation()` and `upgradeToAndCall()` to `IAuthereumAccount.sol`
+  * Add `executeMultipleTransactions()` function and scope it to auth keys
+  * Update `executeMultipleMetaTransactions()` function scope to self
+  * Update ERC1271 logic to reflect newly finalized specification
+  * Add initialization v2 contract that registers the contract with the 1820 registry
 
   **Tests**
   * Add tests
 
+#### 2020060100
+
+  This update adds the ability to pay for contract deployments:
+
+  **General**
+  * Add logic to allow users to pay for deployments of their contracts
+
 #### 2020021700
 
-  This update was in response to samczsun's disclosure:
+  This update is in response to samczsun's disclosure:
 
   **Bugfixes**
   * Validate both auth key and login key tx prior to execution
 
 #### 2020020200
 
-  This update was in response to our Quantstamp audit.
+  This update is in response to our Quantstamp audit.
 
   **General**
   * Require that initialization data has a length of > 0. Prior to this version, it simply did nothing if the length was 0.
@@ -299,6 +369,9 @@ The Authereum proxy's should all share the same bytecode from 'Compiler version 
   * Add `version`
   * Pass `initCode` directly into the constructor
   * Hash `initData` in the `create2` salt to validate auth key
+  * Update `salt` naming convention to be more explicit
+  * Pass `_implementation` into the `createProxy()` function
+  * Add `_implementation` to the salt hash
 
 #### 2019111500
 
