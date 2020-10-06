@@ -52,7 +52,7 @@ contract('AuthereumProxy', function (accounts) {
 
     // Create Logic Contracts
     authereumAccountLogicContract = await ArtifactAuthereumAccount.new()
-    const _proxyInitCode = await utils.calculateProxyBytecodeAndConstructor(authereumAccountLogicContract.address)
+    const _proxyInitCode = await utils.getProxyBytecode()
     authereumProxyFactoryLogicContract = await ArtifactAuthereumProxyFactory.new(_proxyInitCode, authereumEnsManager.address)
     authereumProxyAccountUpgradeLogicContract = await ArtifactAuthereumProxyAccountUpgrade.new()
     authereumProxyAccountUpgradeWithInitLogicContract = await ArtifactAuthereumProxyAccountUpgradeWithInit.new()
@@ -81,7 +81,6 @@ contract('AuthereumProxy', function (accounts) {
     // Handle post-proxy deployment
     await authereumProxyAccount.sendTransaction({ value:constants.TWO_ETHER, from: AUTH_KEYS[0] })
     await utils.setAuthereumRecoveryModule(authereumProxyAccount, authereumRecoveryModule.address, AUTH_KEYS[0])
-    await utils.setAccountIn1820Registry(authereumProxyAccount, erc1820Registry.address, AUTH_KEYS[0])
   })
 
   after(async() => {

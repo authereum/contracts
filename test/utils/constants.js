@@ -29,6 +29,7 @@ module.exports = {
         '2020010900',
         '2020020200',
         '2020021700',
+        '2020060100',
         '2020070100'
       ]
     },
@@ -83,6 +84,7 @@ module.exports = {
   },
   SALT: 123,
   DEFAULT_LABEL: 'myName',
+  DEFAULT_DEPLOYMENT_COST: 0,
 
   /**
    * Tx Data
@@ -138,8 +140,9 @@ module.exports = {
     BA_INSUFFICIENT_GAS_TOKEN: 'BA: Insufficient gas (token) for refund',
     // NOTE: This message is used when an internal, atomic transaction call fails silently
     BA_SILENT_REVERT: 'BA: Transaction reverted silently',
+    BA_REQUIRE_AUTH_KEY: 'BA: Only auth key allowed',
     BA_REQUIRE_SELF: 'BA: Only self allowed',
-    BA_REQUIRE_AUTH_KEY_OR_SELF: 'BA: Auth key or self is invalid',
+    BA_REQUIRE_AUTH_KEY_OR_SELF: 'BA: Only auth key or self allowed',
 
     AI_IMPROPER_INIT_ORDER: 'AI: Improper initialization order',
 
@@ -160,7 +163,7 @@ module.exports = {
 
     AU_NON_CONTRACT_ADDRESS: 'AU: Cannot set a proxy implementation to a non-contract address',
 
-    ERC1271_INVALID_SIG: 'ERC1271: Invalid isValidSignature _signature length',
+    ERC1271_INVALID_SIG_LENGTH: 'ERC1271: Invalid isValidSignature _signature length',
     ERC1271_INVALID_AUTH_KEY_SIG: 'ERC1271: Invalid isValidAuthKeySignature _signature length',
     ERC1271_INVALID_LOGIN_KEY_SIG: 'ERC1271: Invalid isValidLoginKeySignature _signature length',
 
@@ -211,7 +214,6 @@ module.exports = {
     ADKM_INVALID_PARAMETER: 'ADKM: Invalid parameter',
     ADKM_TRANSACTION_DATA_TOO_SHORT: 'ADKM: Transaction data is too short',
     ADKM_ALREADY_REGISTERED: 'ADKM: Delegate Key is already registered',
-    ADKM_SUBTRACTION_UNDERFLOW: 'ADKM: Subtraction underflow',
 
     // General
     // NOTE: This message is used when an auth key transaction (not relayed) fails silently
@@ -219,7 +221,8 @@ module.exports = {
     GENERAL_REVERT: 'revert',
     // NOTE: This message is used when there is not a high enough gasLimit sent by the relayer
     EXCEEDS_GAS_LIMIT: 'base fee exceeds gas limit',
-    // NOTE: This message is used when a executeMultipleMetaTransactions tx faills
+    // NOTE: This message is used when a executeMultipleTransactions or
+    // executeMultipleMetaTransactions tx fails.
     // NOTE: This should prepend another error message
     AUTHEREUM_CALL_REVERT: 'Authereum Call Revert: '
   },

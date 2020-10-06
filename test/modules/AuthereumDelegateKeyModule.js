@@ -37,7 +37,6 @@ contract('AuthereumDelegateKeyModule', function (accounts) {
   const SOME_ETH = '1000'
   const ZERO_FUNCTION_SELECTOR = '0x00000000'
   const ZERO_DATA = '0x'
-  const GAS_TO_SEND = 1000000
 
   let accountContract
   let delegateKeyModule
@@ -65,11 +64,11 @@ contract('AuthereumDelegateKeyModule', function (accounts) {
     badContract = await ArtifactBadTransaction.new()
 
     // Message signature
-    MSG_SIG = await utils.getexecuteMultipleAuthKeyMetaTransactionsSig('2020021700')
+    MSG_SIG = await utils.getexecuteMultipleAuthKeyMetaTransactionsSig('2020070100')
 
     // Create Logic Contracts
     authereumAccountLogicContract = await ArtifactAuthereumAccount.new()
-    const _proxyInitCode = await utils.calculateProxyBytecodeAndConstructor(authereumAccountLogicContract.address)
+    const _proxyInitCode = await utils.getProxyBytecode()
     authereumProxyFactoryLogicContract = await ArtifactAuthereumProxyFactory.new(_proxyInitCode, authereumEnsManager.address)
 
     // Set up Authereum ENS Manager defaults
@@ -98,7 +97,6 @@ contract('AuthereumDelegateKeyModule', function (accounts) {
 
     // Handle post-proxy deployment
     await utils.setAuthereumRecoveryModule(accountContract, authereumRecoveryModule.address, AUTH_KEY)
-    await utils.setAccountIn1820Registry(accountContract, erc1820Registry.address, AUTH_KEY)
 
     returnTransaction = await ArtifactReturnTransaction.new()
 
@@ -173,7 +171,7 @@ contract('AuthereumDelegateKeyModule', function (accounts) {
         accountContract.address,
         0,
         returnTransactionData,
-        { from: DELEGATE_KEY_ADDRESS, gas: GAS_TO_SEND }
+        { from: DELEGATE_KEY_ADDRESS }
       )
 
       utils.expectRawEvent(tx, 'UintEvent2(uint256,uint256)')
@@ -208,7 +206,7 @@ contract('AuthereumDelegateKeyModule', function (accounts) {
         accountContract.address,
         SOME_ETH,
         ZERO_DATA,
-        { from: DELEGATE_KEY_ADDRESS, gas: GAS_TO_SEND }
+        { from: DELEGATE_KEY_ADDRESS }
       )
 
       accountBalance = await web3.eth.getBalance(accountContract.address)
@@ -365,7 +363,7 @@ contract('AuthereumDelegateKeyModule', function (accounts) {
 
         await expectRevert(
           removeDelegateKey(DELEGATE_KEY_ADDRESS, ATTACKER_ADDRESS),
-          constants.REVERT_MSG.BA_REQUIRE_AUTH_KEY_OR_SELF
+          constants.REVERT_MSG.BA_REQUIRE_AUTH_KEY
         )
       })
     })
@@ -393,7 +391,7 @@ contract('AuthereumDelegateKeyModule', function (accounts) {
           accountContract.address,
           0,
           returnTransactionData,
-          { from: DELEGATE_KEY_ADDRESS, gas: GAS_TO_SEND }
+          { from: DELEGATE_KEY_ADDRESS }
         )
         expect(res[0]).to.eq(NUM1_BYTES32)
 
@@ -402,7 +400,7 @@ contract('AuthereumDelegateKeyModule', function (accounts) {
           accountContract.address,
           0,
           returnTransactionData,
-          { from: DELEGATE_KEY_ADDRESS, gas: GAS_TO_SEND }
+          { from: DELEGATE_KEY_ADDRESS }
         )
 
         utils.expectRawEvent(tx, 'UintEvent2(uint256,uint256)')
@@ -425,7 +423,7 @@ contract('AuthereumDelegateKeyModule', function (accounts) {
             accountContract.address,
             0,
             returnTransactionData,
-            { from: DELEGATE_KEY_ADDRESS, gas: GAS_TO_SEND }
+            { from: DELEGATE_KEY_ADDRESS }
           ),
           constants.REVERT_MSG.ADKM_DELEGATE_KEY_NOT_ACTIVE
         )
@@ -481,7 +479,7 @@ contract('AuthereumDelegateKeyModule', function (accounts) {
             accountContract.address,
             0,
             reentrantFunctionData,
-            { from: DELEGATE_KEY_ADDRESS, gas: GAS_TO_SEND }
+            { from: DELEGATE_KEY_ADDRESS }
           ),
           constants.REVERT_MSG.ADKM_DELEGATE_KEY_NOT_ACTIVE
         )
@@ -512,7 +510,7 @@ contract('AuthereumDelegateKeyModule', function (accounts) {
             accountContract.address,
             0,
             returnTransactionData,
-            { from: DELEGATE_KEY_ADDRESS, gas: GAS_TO_SEND }
+            { from: DELEGATE_KEY_ADDRESS }
           ),
           constants.REVERT_MSG.ADKM_DELEGATE_KEY_NOT_ACTIVE
         )
@@ -539,7 +537,7 @@ contract('AuthereumDelegateKeyModule', function (accounts) {
             accountContract.address,
             2,
             returnTransactionData,
-            { from: DELEGATE_KEY_ADDRESS, gas: GAS_TO_SEND }
+            { from: DELEGATE_KEY_ADDRESS }
           ),
           constants.REVERT_MSG.ADKM_VALUE_HIGHER_THAN_MAXIMUM
         )
@@ -582,7 +580,7 @@ contract('AuthereumDelegateKeyModule', function (accounts) {
             accountContract.address,
             0,
             invalidTransactionData,
-            { from: DELEGATE_KEY_ADDRESS, gas: GAS_TO_SEND }
+            { from: DELEGATE_KEY_ADDRESS }
           ),
           constants.REVERT_MSG.ADKM_INVALID_FUNCTION_SELECTOR
         )
@@ -625,7 +623,7 @@ contract('AuthereumDelegateKeyModule', function (accounts) {
             accountContract.address,
             0,
             invalidTransactionData,
-            { from: DELEGATE_KEY_ADDRESS, gas: GAS_TO_SEND }
+            { from: DELEGATE_KEY_ADDRESS }
           ),
           constants.REVERT_MSG.ADKM_INVALID_PARAMETER
         )
@@ -664,7 +662,7 @@ contract('AuthereumDelegateKeyModule', function (accounts) {
             accountContract.address,
             0,
             invalidTransactionData,
-            { from: DELEGATE_KEY_ADDRESS, gas: GAS_TO_SEND }
+            { from: DELEGATE_KEY_ADDRESS }
           ),
           constants.REVERT_MSG.ADKM_TRANSACTION_DATA_TOO_SHORT
         )
@@ -696,7 +694,7 @@ contract('AuthereumDelegateKeyModule', function (accounts) {
             accountContract.address,
             0,
             invalidTransactionData,
-            { from: DELEGATE_KEY_ADDRESS, gas: GAS_TO_SEND }
+            { from: DELEGATE_KEY_ADDRESS }
           ),
           constants.REVERT_MSG.ADKM_INVALID_FUNCTION_SELECTOR
         )
@@ -724,7 +722,7 @@ contract('AuthereumDelegateKeyModule', function (accounts) {
           accountContract.address,
           0,
           invalidTransactionData,
-          { from: DELEGATE_KEY_ADDRESS, gas: GAS_TO_SEND }
+          { from: DELEGATE_KEY_ADDRESS }
         )
 
         utils.expectRawEvent(tx, 'UintEvent2(uint256,uint256)')
@@ -750,13 +748,14 @@ contract('AuthereumDelegateKeyModule', function (accounts) {
             accountContract.address,
             0,
             constants.BAD_DATA,
-            { from: DELEGATE_KEY_ADDRESS, gas: GAS_TO_SEND}
+            { from: DELEGATE_KEY_ADDRESS }
           ),
           constants.REVERT_MSG.AUTHEREUM_CALL_REVERT + constants.REVERT_MSG.BT_WILL_FAIL
         )
       })
 
       it('Should not allow execution if too little gas is sent', async () => {
+        // NOTE: This will fail with an OOG error
         await addDelegateKey(
           DELEGATE_KEY_ADDRESS,
           returnTransactionSelector,
@@ -778,7 +777,7 @@ contract('AuthereumDelegateKeyModule', function (accounts) {
             returnTransactionData,
             { from: DELEGATE_KEY_ADDRESS, gas: 60000}
           ),
-          constants.REVERT_MSG.ADKM_SUBTRACTION_UNDERFLOW
+          constants.REVERT_MSG.GENERAL_REVERT
         )
       })
     })
@@ -833,7 +832,7 @@ contract('AuthereumDelegateKeyModule', function (accounts) {
       delegateKeyModule.address
     )
 
-    return accountContract.executeMultipleMetaTransactions(
+    return accountContract.executeMultipleTransactions(
       [addDelegateKeyTransaction],
       { from: AUTH_KEY }
     )
@@ -851,7 +850,7 @@ contract('AuthereumDelegateKeyModule', function (accounts) {
       delegateKeyModule.address
     )
 
-    return accountContract.executeMultipleMetaTransactions(
+    return accountContract.executeMultipleTransactions(
       [removeDelegateKeyTransaction],
       { from: fromAddress }
     )

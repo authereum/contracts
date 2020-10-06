@@ -69,7 +69,7 @@ contract('AuthereumLoginKeyValidator', function (accounts) {
         )
       })
 
-      it('should revert if relayer is not whitelisted', async () => {
+      it('should revert if relayer is not allowed', async () => {
         await AuthereumLoginKeyValidator.addRelayers([relayers[0]])
 
         await expectRevert(
@@ -148,7 +148,7 @@ contract('AuthereumLoginKeyValidator', function (accounts) {
       })
     })
     context('Non-Happy path', () => {
-      it('should revert if relayer is whitelisted', async () => {
+      it('should revert if relayer is allowed', async () => {
 
         await AuthereumLoginKeyValidator.addRelayers([relayers[0]])
 

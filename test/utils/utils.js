@@ -18,29 +18,22 @@ const getMethodSign = (name, ...params) => {
 }
 
 const getArbitrarySignedMessage = (msg) => {
-  // Get the unsigned message keccack256(abi.encodePacked())
+  // Get the unsigned message keccak256(abi.encodePacked())
   let unsignedMessageHash = web3.utils.soliditySha3(msg)
-  let sigedMsg = web3.eth.accounts.sign(unsignedMessageHash, LOGIN_KEY_0_PRIV_KEY)
+  let signedMsg = web3.eth.accounts.sign(unsignedMessageHash, LOGIN_KEY_0_PRIV_KEY)
   return {
-    messageHash: sigedMsg.messageHash,
-    msgHashSignature: sigedMsg.signature
+    messageHash: signedMsg.messageHash,
+    msgHashSignature: signedMsg.signature
   }
 }
 
-const getArbitraryBytesSignedMessage = (msg) => {
-  let sigedMsg = web3.eth.accounts.sign(msg, LOGIN_KEY_0_PRIV_KEY)
+const getSignedMessageData = (msg, privateKey) => {
+  let signedMsg = web3.eth.accounts.sign(msg, privateKey)
   return {
-    messageHash: sigedMsg.messageHash,
-    msgHashSignature: sigedMsg.signature
+    msgHash: signedMsg.messageHash,
+    msgHashSignature: signedMsg.signature
   }
-}
 
-const getAuthSignedMessage = (msg) => {
-  let sigedMsg = web3.eth.accounts.sign(msg, AUTH_KEY_0_PRIV_KEY)
-  return {
-    messageHash: sigedMsg.messageHash,
-    msgHashSignature: sigedMsg.signature
-  }
 }
 
 // Encode tx data params
@@ -51,38 +44,48 @@ const encodeTransactionParams = async (to, value, gasLimit, data) => {
   )
 }
 
+const signBytesData = async (bytesData, customPrivateKey = '') => {
+  // This signs bytes data
+  // The value passed as the data parameter will be UTF-8 HEX decoded and
+  // wrapped as follows: "\x19Ethereum Signed Message:\n" + message.length + message.
+  const privateKey = customPrivateKey === '' ? AUTH_KEY_0_PRIV_KEY : customPrivateKey
+  // const encodedParam = await web3.eth.abi.encodeParameter('bytes', bytesData)
+  // const hashedMsg = await web3.utils.soliditySha3(bytesData)
+  const signedMsgData = await web3.eth.accounts.sign(bytesData, privateKey)
+  return signedMsgData.signature
+}
 // This function gets the signed message hash that is used to verify the _loginKeyAddress
 // in the contract. It is signed by the login key. This function returns the signed
 const getAuthKeySignedMessageHash = async (address, msgSig, chainId, nonce, transactions, gasPrice, gasOverhead, feeTokenAddress, feeTokenRate) => {
   // Get the unsigned message
   // NOTE: For AuthereumAccount.sol versions >= 2019111500
   // NOTE: let encodedParams = web3.eth.abi.encodeParameters()
-  // NOTE: web3.utils.soliditySha3(encodedParams) = keccack256(abi.encode())
+  // NOTE: web3.utils.soliditySha3(encodedParams) = keccak256(abi.encode())
   // NOTE: For AuthereumAccount.sol versions < 2019111500
-  // NOTE: web3.utils.soliditySha3() = keccack256(abi.encodePacked())
+  // NOTE: web3.utils.soliditySha3() = keccak256(abi.encodePacked())
   let encodedParams = await web3.eth.abi.encodeParameters(
     ['address', 'bytes4', 'uint256', 'uint256', 'bytes[]', 'uint256', 'uint256', 'address', 'uint256'],
     [address, msgSig, chainId, Number(nonce), transactions, gasPrice, gasOverhead, feeTokenAddress, feeTokenRate]
   )
   let unsignedMessageHash = await web3.utils.soliditySha3(encodedParams)
-  let sigedMsg = web3.eth.accounts.sign(unsignedMessageHash, AUTH_KEY_0_PRIV_KEY)
-  return sigedMsg.signature
+  let signedMsg = web3.eth.accounts.sign(unsignedMessageHash, AUTH_KEY_0_PRIV_KEY)
+  return signedMsg.signature
 }
 
 const getLoginKeySignedMessageHash = async (address, msgSig, chainId, nonce, transactions, gasPrice, gasOverhead, feeTokenAddress, feeTokenRate) => {
   // Get the unsigned message
   // NOTE: For AuthereumAccount.sol versions >= 2019111500
   // NOTE: let encodedParams = web3.eth.abi.encodeParameters()
-  // NOTE: web3.utils.soliditySha3(encodedParams) = keccack256(abi.encode())
+  // NOTE: web3.utils.soliditySha3(encodedParams) = keccak256(abi.encode())
   // NOTE: For AuthereumAccount.sol versions < 2019111500
-  // NOTE: web3.utils.soliditySha3() = keccack256(abi.encodePacked())
+  // NOTE: web3.utils.soliditySha3() = keccak256(abi.encodePacked())
   let encodedParams = await web3.eth.abi.encodeParameters(
     ['address', 'bytes4', 'uint256', 'uint256', 'bytes[]', 'uint256', 'uint256', 'address', 'uint256'],
     [address, msgSig, chainId, Number(nonce), transactions, gasPrice, gasOverhead, feeTokenAddress, feeTokenRate]
   )
   let unsignedMessageHash = await web3.utils.soliditySha3(encodedParams)
-  let sigedMsg = web3.eth.accounts.sign(unsignedMessageHash, LOGIN_KEY_0_PRIV_KEY)
-  return sigedMsg.signature
+  let signedMsg = web3.eth.accounts.sign(unsignedMessageHash, LOGIN_KEY_0_PRIV_KEY)
+  return signedMsg.signature
 }
 
 // This function gets the signed login key (signed by the auth key). It returns the
@@ -94,8 +97,8 @@ const getSignedLoginKey = (loginKey, loginKeyRestrictionsData) => {
   )
 
   let unsignedLoginKeyHash = web3.utils.soliditySha3(loginKeyMessageData)
-  let sigedMsg = web3.eth.accounts.sign(unsignedLoginKeyHash, AUTH_KEY_0_PRIV_KEY)
-  return sigedMsg.signature
+  let signedMsg = web3.eth.accounts.sign(unsignedLoginKeyHash, AUTH_KEY_0_PRIV_KEY)
+  return signedMsg.signature
 }
 
 // Combines two hex strings into one hex string
@@ -138,7 +141,7 @@ const setENSDefaults = async (authereumOwner) => {
   ensRegistry = await ArtifactEnsRegistry.new({ from: authereumOwner })
   // NOTE: The Authereum ENS Resolver is deployed via a proxy.
   // NOTE: The logic contract must be deployed first, followed by the proxy, then one must wrap the proxy in the logic artifact
-  authereumEnsResolverLogicContract = await ArtifactAuthereumEnsResolver.new(ensRegistry.address, authereumOwner, { from: authereumOwner })
+  authereumEnsResolverLogicContract = await ArtifactAuthereumEnsResolver.new(ensRegistry.address, { from: authereumOwner })
   authereumEnsResolverProxy = await ArtifactAuthereumEnsResolverProxy.new(authereumEnsResolverLogicContract.address, { from: authereumOwner })
   authereumEnsResolver = await ArtifactAuthereumEnsResolver.at(authereumEnsResolverProxy.address)
   ensReverseRegistrar = await ArtifactEnsReverseRegistrar.new(ensRegistry.address, authereumEnsResolver.address, { from: authereumOwner })
@@ -152,7 +155,7 @@ const setENSDefaults = async (authereumOwner) => {
   await ensRegistry.setSubnodeOwner(constants.HASH_ZERO, ethHash, authereumOwner, { from: authereumOwner })
   await ensRegistry.setSubnodeOwner(ethTldNode, authHash, authereumEnsManager.address, { from: authereumOwner })
 
-  // // Set up Authereum managers
+  // Set up Authereum managers
   await authereumEnsResolver.addManager(authereumOwner, { from: authereumOwner })
   await authereumEnsResolver.addManager(authereumEnsManager.address, { from: authereumOwner })
 
@@ -194,22 +197,22 @@ const setAuthereumProxyFactory = async (project) => {
 
 // Inspiration from miguelmota's solidity-create-2-example repo
 // https://github.com/miguelmota/solidity-create2-example/blob/master/test/utils/index.js#L56
-function buildCreate2Address(creatorAddress, saltHash, proxyBytecodeAndConstructorHash) {
+function buildCreate2Address(proxyFactory, saltHash, proxyBytecodeWithConstructorHash) {
   const nonChecksumAddress = `0x${web3.utils.sha3(`0x${[
     'ff',
-    creatorAddress,
+    proxyFactory,
     saltHash,
-    proxyBytecodeAndConstructorHash
+    proxyBytecodeWithConstructorHash
   ].map(x => x.replace(/0x/, ''))
   .join('')}`).slice(-40)}`.toLowerCase()
 
   return web3.utils.toChecksumAddress(nonChecksumAddress)
 }
 
-function getSaltHash(_salt, _initCode) {
+function getSaltHash(_salt, _initCode, _logicContractAddress) {
   const _encodedParams = web3.eth.abi.encodeParameter('bytes[]', _initCode)
   const _hashedInitCode = web3.utils.soliditySha3(_encodedParams)
-  return web3.utils.soliditySha3(_salt, _hashedInitCode)
+  return web3.utils.soliditySha3(_salt, _hashedInitCode, _logicContractAddress)
 }
 
 /*
@@ -243,7 +246,9 @@ function encodeUpgradeToAndCall(implementationAddress, data) {
 
 const getAuthereumAccountCreationData = async (authKey) => {
   const creationDataV1 = await getAuthereumAccountCreationDataV1(authKey)
-  return [creationDataV1]
+  const creationDataV2 = await getAuthereumAccountCreationDataV2(constants.DEFAULT_DEPLOYMENT_COST, constants.ZERO_ADDRESS)
+  const creationDataV3 = await getAuthereumAccountCreationDataV3()
+  return [creationDataV1, creationDataV2, creationDataV3]
 }
 
 const getAuthereumAccountCreationDataV1 = async (authKey) => {
@@ -252,10 +257,84 @@ const getAuthereumAccountCreationDataV1 = async (authKey) => {
       name: 'initializeV1',
       type: 'function',
       inputs: [{
-          type: 'address',
-          name: '_authKey'
+        type: 'address',
+        name: '_authKey'
       }]
   }, [authKey])
+}
+
+const getAuthereumAccountCreationDataV2 = async (deploymentCost, deploymentFeeTokenAddress) => {
+  return web3.eth.abi.encodeFunctionCall({
+      name: 'initializeV2',
+      type: 'function',
+      inputs: [{
+        type: 'uint256',
+        name: '_deploymentCost'
+      }, {
+        type: 'address',
+        name: '_deploymentFeeTokenAddress'
+      }]
+  }, [deploymentCost, deploymentFeeTokenAddress])
+}
+
+const getAuthereumAccountCreationDataV3 = async () => {
+  return web3.eth.abi.encodeFunctionCall({
+      name: 'initializeV3',
+      type: 'function',
+      inputs: []
+  }, [])
+}
+
+const createProxyInitializeV1 = async (
+  salt,
+  txOrigin,
+  authereumProxyFactory,
+  authKey,
+  label,
+  logicContractAddress,
+) => {
+  const accountCreationData = await getAuthereumAccountCreationDataV1(authKey)
+
+  await authereumProxyFactory.createProxy(salt, label, [accountCreationData], logicContractAddress)
+
+  // Deploy the proxy
+  const saltHash = getSaltHash(salt, [accountCreationData], logicContractAddress)
+  const proxyBytecodeWithConstructorHash = await getProxyBytecodeWithConstructorHash(logicContractAddress)
+  return buildCreate2Address(authereumProxyFactory.address, saltHash, proxyBytecodeWithConstructorHash)
+}
+
+const createProxyInitializeV2 = async (
+  salt,
+  txOrigin,
+  authereumProxyFactory,
+  label,
+  logicContractAddress,
+) => {
+  const accountCreationData = await getAuthereumAccountCreationDataV2(constants.DEFAULT_DEPLOYMENT_COST, constants.ZERO_ADDRESS)
+
+  await authereumProxyFactory.createProxy(salt, label, [accountCreationData], logicContractAddress)
+
+  // Deploy the proxy
+  const saltHash = getSaltHash(salt, [accountCreationData], logicContractAddress)
+  const proxyBytecodeWithConstructorHash = await getProxyBytecodeWithConstructorHash(logicContractAddress)
+  return buildCreate2Address(authereumProxyFactory.address, saltHash, proxyBytecodeWithConstructorHash)
+}
+
+const createProxyInitializeV3 = async (
+  salt,
+  txOrigin,
+  authereumProxyFactory,
+  label,
+  logicContractAddress,
+) => {
+  const accountCreationData = await getAuthereumAccountCreationDataV3()
+
+  await authereumProxyFactory.createProxy(salt, label, [accountCreationData], logicContractAddress)
+
+  // Deploy the proxy
+  const saltHash = getSaltHash(salt, [accountCreationData], logicContractAddress)
+  const proxyBytecodeWithConstructorHash = await getProxyBytecodeWithConstructorHash(logicContractAddress)
+  return buildCreate2Address(authereumProxyFactory.address, saltHash, proxyBytecodeWithConstructorHash)
 }
 
 // NOTE: There is no init function to call when being updated, so the data is
@@ -306,26 +385,28 @@ const createProxy = async (
   label,
   logicContractAddress,
 ) => {
-  // NOTE: This data is expected to be the data for the latest AccountInitialize
-  // version
   const accountCreationData = await getAuthereumAccountCreationData(authKey)
 
-  await authereumProxyFactory.createProxy(salt, label, accountCreationData)
+  await authereumProxyFactory.createProxy(salt, label, accountCreationData, logicContractAddress)
 
-  // Deploy the proxy
-  const saltHash = getSaltHash(salt, accountCreationData)
-  const proxyCreationHash = await calculateProxyBytecodeAndConstructorHash(logicContractAddress)
-  return buildCreate2Address(authereumProxyFactory.address, saltHash, proxyCreationHash)
+  const saltHash = getSaltHash(salt, accountCreationData, logicContractAddress)
+  const proxyBytecodeWithConstructorHash = await getProxyBytecodeWithConstructorHash(logicContractAddress)
+  return buildCreate2Address(authereumProxyFactory.address, saltHash, proxyBytecodeWithConstructorHash)
 }
 
-const calculateProxyBytecodeAndConstructor = async (logicContract) => {
+const getProxyBytecode = () => {
+  return constants.AUTHEREUM_PROXY_CREATION_CODE
+}
+
+const getProxyBytecodeWithConstructor = async (logicContract) => {
+  const bytecode = getProxyBytecode()
   const encodedLogicAddress = await web3.eth.abi.encodeParameter('address', logicContract)
-  return constants.AUTHEREUM_PROXY_CREATION_CODE + encodedLogicAddress.slice(2)
+  return bytecode + encodedLogicAddress.slice(2)
 }
 
-const calculateProxyBytecodeAndConstructorHash = async (logicContract) => {
-  const proxyBytecodeAndConstructor = await calculateProxyBytecodeAndConstructor(logicContract)
-  return web3.utils.sha3(proxyBytecodeAndConstructor)
+const getProxyBytecodeWithConstructorHash = async (logicContract) => {
+  const proxyBytecodeWithConstructor = await getProxyBytecodeWithConstructor(logicContract)
+  return web3.utils.sha3(proxyBytecodeWithConstructor)
 }
 
 const getexecuteMultipleAuthKeyMetaTransactionsSig = async (versionNumber) => {
@@ -356,7 +437,8 @@ const getexecuteMultipleAuthKeyMetaTransactionsSig = async (versionNumber) => {
              versionNumber === '2019122100' ||
              versionNumber === '2020010900' ||
              versionNumber === '2020020200' ||
-             versionNumber === '2020021700'
+             versionNumber === '2020021700' ||
+             versionNumber === '2020070100'
   ) {
     return await web3.eth.abi.encodeFunctionSignature({
         name: 'executeMultipleAuthKeyMetaTransactions',
@@ -416,7 +498,8 @@ const getexecuteMultipleLoginKeyMetaTransactionsSig = async (versionNumber) => {
              versionNumber === '2019122100' ||
              versionNumber === '2020010900' ||
              versionNumber === '2020020200' ||
-             versionNumber === '2020021700'
+             versionNumber === '2020021700' ||
+             versionNumber === '2020070100'
     ) {
     return await web3.eth.abi.encodeFunctionSignature({
         name: 'executeMultipleLoginKeyMetaTransactions',
@@ -476,20 +559,6 @@ const setAuthereumRecoveryModule = async (authereumAccount, authereumRecoveryMod
   )
 }
 
-const setAccountIn1820Registry = async (authereumAccount, erc1820RegistryAddress, authKeyAddress) => {
-  const _to = erc1820RegistryAddress
-  const _value = '0'
-  const _gasLimit = '1000000'
-  const _data =  await getErc1820RegistrySetData(authereumAccount.address, erc1820RegistryAddress)
-  const _encodedParameters = await encodeTransactionParams(_to, _value, _gasLimit, _data)
-  const _transactions = [_encodedParameters]
-
-  await authereumAccount.executeMultipleMetaTransactions(
-    _transactions, { from: authKeyAddress }
-  )
-
-}
-
 const getErc1820RegistrySetData = async (authereumAccountAddress, erc1820RegistryAddress) => {
   authereumAccountAddress = web3.utils.toChecksumAddress(authereumAccountAddress)
   erc1820RegistryAddress = web3.utils.toChecksumAddress(erc1820RegistryAddress)
@@ -520,9 +589,9 @@ const getImplementationAddressFromStorageSlot = async (_proxyAddress) => {
 module.exports = {
   getMethodSign,
   getArbitrarySignedMessage,
-  getArbitraryBytesSignedMessage,
-  getAuthSignedMessage,
+  getSignedMessageData,
   encodeTransactionParams,
+  signBytesData,
   getAuthKeySignedMessageHash,
   getLoginKeySignedMessageHash,
   getSignedLoginKey,
@@ -538,18 +607,23 @@ module.exports = {
   encodeUpgradeToAndCall,
   getAuthereumAccountCreationData,
   getAuthereumAccountCreationDataV1,
+  getAuthereumAccountCreationDataV2,
+  getAuthereumAccountCreationDataV3,
+  createProxyInitializeV1,
+  createProxyInitializeV2,
+  createProxyInitializeV3,
   getAuthereumAccountCreationDataWithUpgrade,
   getAuthereumAccountCreationDataWithUpgradeWithInit,
   createDefaultProxy,
   createProxy,
-  calculateProxyBytecodeAndConstructor,
-  calculateProxyBytecodeAndConstructorHash,
+  getProxyBytecode,
+  getProxyBytecodeWithConstructor,
+  getProxyBytecodeWithConstructorHash,
   getexecuteMultipleAuthKeyMetaTransactionsSig,
   getexecuteMultipleLoginKeyMetaTransactionsSig,
   expectRawEvent,
   deploy1820Contract,
   setAuthereumRecoveryModule,
-  setAccountIn1820Registry,
   getErc1820RegistrySetData,
   getImplementationAddressFromStorageSlot
 }

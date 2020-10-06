@@ -1,5 +1,4 @@
 const { balance, expectEvent, expectRevert } = require('@openzeppelin/test-helpers')
-const isValidSignature = require('is-valid-signature')
 
 const utils = require('../utils/utils')
 const constants = require('../utils/constants.js')
@@ -86,11 +85,11 @@ contract('BaseAccount', function (accounts) {
     const { authereumEnsManager } = await utils.setENSDefaults(AUTHEREUM_OWNER)
 
     // Message signature
-    MSG_SIG = await utils.getexecuteMultipleAuthKeyMetaTransactionsSig('2020021700')
+    MSG_SIG = await utils.getexecuteMultipleAuthKeyMetaTransactionsSig('2020070100')
 
     // Create Logic Contracts
     authereumAccountLogicContract = await ArtifactAuthereumAccount.new()
-    const _proxyInitCode = await utils.calculateProxyBytecodeAndConstructor(authereumAccountLogicContract.address)
+    const _proxyInitCode = await utils.getProxyBytecode()
     authereumProxyFactoryLogicContract = await ArtifactAuthereumProxyFactory.new(_proxyInitCode, authereumEnsManager.address)
     authereumProxyAccountUpgradeLogicContract = await ArtifactAuthereumProxyAccountUpgrade.new()
     authereumProxyAccountUpgradeWithInitLogicContract = await ArtifactAuthereumProxyAccountUpgradeWithInit.new()
@@ -118,7 +117,6 @@ contract('BaseAccount', function (accounts) {
     // Handle post-proxy deployment
     // await authereumProxyAccount.sendTransaction({ value:constants.TWO_ETHER, from: AUTH_KEYS[0] })
     await utils.setAuthereumRecoveryModule(authereumProxyAccount, authereumRecoveryModule.address, AUTH_KEYS[0])
-    await utils.setAccountIn1820Registry(authereumProxyAccount, erc1820Registry.address, AUTH_KEYS[0])
 
     // Default transaction data
     nonce = await authereumProxyAccount.nonce()
@@ -198,12 +196,12 @@ contract('BaseAccount', function (accounts) {
       })
       assert.equal(transaction.gasUsed, expectedGas)
     })
-    it('Should use exactly 22928 gas on a transaction with data', async () => {
+    it('Should use exactly 22906 gas on a transaction with data', async () => {
       // NOTE: The update from constantinople to istanbul forced a change in gas here.
       // This test was originally written to determine these changes. Since the
       // fork was successfully implemented, the constantinople checks have been
       // removed.
-      const expectedGas = 22928
+      const expectedGas = 22906
 
       // NOTE: There is a bug in Truffle that causes data to not be sent
       // NOTE: with the transaction when sending with truffle-contracts.
@@ -270,7 +268,7 @@ contract('BaseAccount', function (accounts) {
         const _transactions = [_encodedParameters]
 
         // NOTE: As of AuthereumAccountv202003xx00, the contract no longer has a concept of if it should or should not refund.
-        // This is now done by the relayer. This is mimiced here by setting the user's gasPrice to 0
+        // This is now done by the relayer. This is mimicked here by setting the user's gasPrice to 0
         const _gasPrice = 0
 
         // Get default signedMessageHash and signedLoginKey
@@ -333,7 +331,7 @@ contract('BaseAccount', function (accounts) {
         const _transactions = [_encodedParameters]
 
         // Get default signedMessageHash and signedLoginKey
-        // NOTE: The signing is done here manually (as oppsoed to calling utils.getAuthKeySignedMessageHash()) in
+        // NOTE: The signing is done here manually (as opposed to calling utils.getAuthKeySignedMessageHash()) in
         // order to sign with the malicious signer
         let encodedParams = await web3.eth.abi.encodeParameters(
           ['address', 'bytes4', 'uint256', 'uint256', 'bytes[]', 'uint256', 'uint256', 'address', 'uint256'],
@@ -351,8 +349,8 @@ contract('BaseAccount', function (accounts) {
         )
         let unsignedMessageHash = await web3.utils.soliditySha3(encodedParams)
         const MALICIOUS_PRIV_KEY = '0xb0057716d5917badaf911b193b12b910811c1497b5bada8d7711f758981c3773'
-        let sigedMsg = web3.eth.accounts.sign(unsignedMessageHash, MALICIOUS_PRIV_KEY)
-        const _transactionMessageHashSignature = sigedMsg.signature
+        let signedMsg = web3.eth.accounts.sign(unsignedMessageHash, MALICIOUS_PRIV_KEY)
+        const _transactionMessageHashSignature = signedMsg.signature
 
         await expectRevert(authereumProxyAccount.executeMultipleAuthKeyMetaTransactions(
           _transactions, gasPrice, gasOverhead, feeTokenAddress, feeTokenRate, _transactionMessageHashSignature, { from: RELAYER, gasPrice: gasPrice }
@@ -531,7 +529,7 @@ contract('BaseAccount', function (accounts) {
         const _transactions = [_encodedParameters]
 
         // NOTE: As of AuthereumAccountv202003xx00, the contract no longer has a concept of if it should or should not refund.
-        // This is now done by the relayer. This is mimiced here by setting the user's gasPrice to 0
+        // This is now done by the relayer. This is mimicked here by setting the user's gasPrice to 0
         const _gasPrice = 0
 
         // Get default signedMessageHash and signedLoginKey
@@ -595,7 +593,7 @@ contract('BaseAccount', function (accounts) {
         const _transactions = [_encodedParameters]
 
         // Get default signedMessageHash and signedLoginKey
-        // NOTE: The signing is done here manually (as oppsoed to calling utils.getAuthKeySignedMessageHash()) in
+        // NOTE: The signing is done here manually (as opposed to calling utils.getAuthKeySignedMessageHash()) in
         // order to sign with the malicious signer
         let encodedParams = await web3.eth.abi.encodeParameters(
           ['address', 'bytes4', 'uint256', 'uint256', 'bytes[]', 'uint256', 'uint256', 'address', 'uint256'],
@@ -613,8 +611,8 @@ contract('BaseAccount', function (accounts) {
         )
         let unsignedMessageHash = await web3.utils.soliditySha3(encodedParams)
         const MALICIOUS_PRIV_KEY = '0xb0057716d5917badaf911b193b12b910811c1497b5bada8d7711f758981c3773'
-        let sigedMsg = web3.eth.accounts.sign(unsignedMessageHash, MALICIOUS_PRIV_KEY)
-        const _transactionMessageHashSignature = sigedMsg.signature
+        let signedMsg = web3.eth.accounts.sign(unsignedMessageHash, MALICIOUS_PRIV_KEY)
+        const _transactionMessageHashSignature = signedMsg.signature
 
         await expectRevert(authereumProxyAccount.executeMultipleLoginKeyMetaTransactions(
           _transactions, gasPrice, gasOverhead, loginKeyRestrictionsData, feeTokenAddress, feeTokenRate, _transactionMessageHashSignature, loginKeyAttestationSignature, { from: RELAYER, gasPrice: gasPrice }

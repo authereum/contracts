@@ -40,11 +40,11 @@ contract('AuthereumRecoveryModule', function (accounts) {
     const { authereumEnsManager } = await utils.setENSDefaults(AUTHEREUM_OWNER)
 
     // Message signature
-    MSG_SIG = await utils.getexecuteMultipleAuthKeyMetaTransactionsSig('2020021700')
+    MSG_SIG = await utils.getexecuteMultipleAuthKeyMetaTransactionsSig('2020070100')
 
     // Create Logic Contracts
     authereumAccountLogicContract = await ArtifactAuthereumAccount.new()
-    const _proxyInitCode = await utils.calculateProxyBytecodeAndConstructor(authereumAccountLogicContract.address)
+    const _proxyInitCode = await utils.getProxyBytecode()
     authereumProxyFactoryLogicContract = await ArtifactAuthereumProxyFactory.new(_proxyInitCode, authereumEnsManager.address)
 
     // Set up Authereum ENS Manager defaults
@@ -69,7 +69,6 @@ contract('AuthereumRecoveryModule', function (accounts) {
     // Handle post-proxy deployment
     await accountContract.sendTransaction({ value:constants.TWO_ETHER, from: AUTH_KEY })
     await utils.setAuthereumRecoveryModule(accountContract, authereumRecoveryModule.address, AUTH_KEY)
-    await utils.setAccountIn1820Registry(accountContract, erc1820Registry.address, AUTH_KEY)
   })
 
   after(async() => {
@@ -547,7 +546,7 @@ contract('AuthereumRecoveryModule', function (accounts) {
     )
 
     // Add recovery account
-    return accountContract.executeMultipleMetaTransactions([addRecoveryTransactionData], { from: AUTH_KEY })
+    return accountContract.executeMultipleTransactions([addRecoveryTransactionData], { from: AUTH_KEY })
   }
 
   async function removeRecoveryAccount(recoveryAddress ) {
@@ -566,7 +565,7 @@ contract('AuthereumRecoveryModule', function (accounts) {
     )
   
     // Add recovery account
-    return accountContract.executeMultipleMetaTransactions([addRecoveryTransactionData], { from: AUTH_KEY })
+    return accountContract.executeMultipleTransactions([addRecoveryTransactionData], { from: AUTH_KEY })
   }
 
   async function expectActiveRecoveryAccount(recoveryAddress) {

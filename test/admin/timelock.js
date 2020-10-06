@@ -71,7 +71,7 @@ contract('Timelock', function (accounts) {
 
     // Create Logic Contracts
     authereumAccountLogicContract = await ArtifactAuthereumAccount.new()
-    const _proxyInitCode = await utils.calculateProxyBytecodeAndConstructor(authereumAccountLogicContract.address)
+    const _proxyInitCode = await utils.getProxyBytecode()
     authereumProxyFactoryLogicContract = await ArtifactAuthereumProxyFactory.new(_proxyInitCode, authereumEnsManager.address)
     authereumProxyAccountUpgradeLogicContract = await ArtifactAuthereumProxyAccountUpgrade.new()
     authereumProxyAccountUpgradeWithInitLogicContract = await ArtifactAuthereumProxyAccountUpgradeWithInit.new()
@@ -288,10 +288,10 @@ contract('Timelock', function (accounts) {
       const newTimelock = await timelockInstance.timelock.call()
       assert.equal(Number(newTimelock), expectedNewTimelock)
     })
-    it('Should not let the owner call this funciton directly', async () => {
+    it('Should not let the owner call this function directly', async () => {
       await expectRevert(timelockInstance.setTimelock(1), constants.REVERT_MSG.T_REQUIRE_TIMELOCK_CONTRACT)
     })
-    it('Should not let anyone call this funciton directly', async () => {
+    it('Should not let anyone call this function directly', async () => {
       await expectRevert(timelockInstance.setTimelock(1, { from: AUTH_KEYS[0] }), constants.REVERT_MSG.T_REQUIRE_TIMELOCK_CONTRACT)
     })
   })
@@ -317,10 +317,10 @@ contract('Timelock', function (accounts) {
       const newTimelockExpire = await timelockInstance.timelockExpire.call()
       assert.equal(Number(newTimelockExpire), expectedNewTimelockExpire)
     })
-    it('Should not let the owner call this funciton directly', async () => {
+    it('Should not let the owner call this function directly', async () => {
       await expectRevert(timelockInstance.setTimelockExpire(1), constants.REVERT_MSG.T_REQUIRE_TIMELOCK_CONTRACT)
     })
-    it('Should not let anyone call this funciton directly', async () => {
+    it('Should not let anyone call this function directly', async () => {
       await expectRevert(timelockInstance.setTimelockExpire(1, { from: AUTH_KEYS[0] }), constants.REVERT_MSG.T_REQUIRE_TIMELOCK_CONTRACT)
     })
   })

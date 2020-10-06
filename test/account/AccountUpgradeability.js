@@ -78,11 +78,11 @@ contract('AccountUpgradeability', function (accounts) {
     const { authereumEnsManager } = await utils.setENSDefaults(AUTHEREUM_OWNER)
 
     // Message signature
-    MSG_SIG = await utils.getexecuteMultipleAuthKeyMetaTransactionsSig('2020021700')
+    MSG_SIG = await utils.getexecuteMultipleAuthKeyMetaTransactionsSig('2020070100')
 
     // Create Logic Contracts
     authereumAccountLogicContract = await ArtifactAuthereumAccount.new()
-    const _proxyInitCode = await utils.calculateProxyBytecodeAndConstructor(authereumAccountLogicContract.address)
+    const _proxyInitCode = await utils.getProxyBytecode()
     authereumProxyFactoryLogicContract = await ArtifactAuthereumProxyFactory.new(_proxyInitCode, authereumEnsManager.address)
     authereumProxyAccountUpgradeLogicContract = await ArtifactAuthereumProxyAccountUpgrade.new()
     authereumProxyAccountUpgradeWithInitLogicContract = await ArtifactAuthereumProxyAccountUpgradeWithInit.new()
@@ -111,7 +111,6 @@ contract('AccountUpgradeability', function (accounts) {
     // Handle post-proxy deployment
     await authereumProxyAccount.sendTransaction({ value:constants.TWO_ETHER, from: AUTH_KEYS[0] })
     await utils.setAuthereumRecoveryModule(authereumProxyAccount, authereumRecoveryModule.address, AUTH_KEYS[0])
-    await utils.setAccountIn1820Registry(authereumProxyAccount, erc1820Registry.address, AUTH_KEYS[0])
 
     // Generate params
     nonce = await authereumProxyAccount.nonce()
@@ -329,7 +328,7 @@ contract('AccountUpgradeability', function (accounts) {
         const _transactions = [_encodedParameters]
 
         // Get default signedMessageHash and signedLoginKey
-        // NOTE: The signing is done here manually (as oppsoed to calling utils.getAuthKeySignedMessageHash()) in
+        // NOTE: The signing is done here manually (as opposed to calling utils.getAuthKeySignedMessageHash()) in
         // order to sign with the malicious signer
         let encodedParams = await web3.eth.abi.encodeParameters(
           ['address', 'bytes4', 'uint256', 'uint256', 'bytes[]', 'uint256', 'uint256', 'address', 'uint256'],
@@ -347,8 +346,8 @@ contract('AccountUpgradeability', function (accounts) {
         )
         let unsignedMessageHash = await web3.utils.soliditySha3(encodedParams)
         const MALICIOUS_PRIV_KEY = '0xb0057716d5917badaf911b193b12b910811c1497b5bada8d7711f758981c3773'
-        let sigedMsg = web3.eth.accounts.sign(unsignedMessageHash, MALICIOUS_PRIV_KEY)
-        const _transactionMessageHashSignature = sigedMsg.signature
+        let signedMsg = web3.eth.accounts.sign(unsignedMessageHash, MALICIOUS_PRIV_KEY)
+        const _transactionMessageHashSignature = signedMsg.signature
 
         await expectRevert(authereumProxyAccount.executeMultipleAuthKeyMetaTransactions(
           _transactions, gasPrice, gasOverhead, feeTokenAddress, feeTokenRate, _transactionMessageHashSignature, { from: RELAYER, gasPrice: gasPrice }
@@ -399,7 +398,8 @@ contract('AccountUpgradeability', function (accounts) {
           _transactions, gasPrice, gasOverhead, feeTokenAddress, feeTokenRate, _transactionMessageHashSignature, { from: RELAYER, gasPrice: gasPrice }
         )
 
-        expectEvent.inLogs(logs, 'CallFailed', { reason: constants.REVERT_MSG.AI_IMPROPER_INIT_ORDER })
+        const _expectedReason = constants.REVERT_MSG.AUTHEREUM_CALL_REVERT + constants.REVERT_MSG.AI_IMPROPER_INIT_ORDER
+        expectEvent.inLogs(logs, 'CallFailed', { reason: _expectedReason })
       })
       it('Should not allow a proxy\'s to upgrade w/ init in a non-contract address as the implementation address', async () => {
         // Set up params
@@ -436,7 +436,8 @@ contract('AccountUpgradeability', function (accounts) {
           _transactions, gasPrice, gasOverhead, feeTokenAddress, feeTokenRate, _transactionMessageHashSignature, { from: RELAYER, gasPrice: gasPrice }
         )
 
-        expectEvent.inLogs(logs, 'CallFailed', { reason: constants.REVERT_MSG.AU_NON_CONTRACT_ADDRESS })
+        const _expectedReason = constants.REVERT_MSG.AUTHEREUM_CALL_REVERT + constants.REVERT_MSG.AU_NON_CONTRACT_ADDRESS
+        expectEvent.inLogs(logs, 'CallFailed', { reason: _expectedReason })
       })
     })
   })

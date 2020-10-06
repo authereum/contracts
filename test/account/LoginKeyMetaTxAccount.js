@@ -89,11 +89,11 @@ contract('LoginKeyMetaTxAccount', function (accounts) {
     const { authereumEnsManager } = await utils.setENSDefaults(AUTHEREUM_OWNER)
 
     // Message signature
-    MSG_SIG = await utils.getexecuteMultipleLoginKeyMetaTransactionsSig('2020010900')
+    MSG_SIG = await utils.getexecuteMultipleLoginKeyMetaTransactionsSig('2020070100')
 
     // Create Logic Contracts
     authereumAccountLogicContract = await ArtifactAuthereumAccount.new()
-    const _proxyInitCode = await utils.calculateProxyBytecodeAndConstructor(authereumAccountLogicContract.address)
+    const _proxyInitCode = await utils.getProxyBytecode()
     authereumProxyFactoryLogicContract = await ArtifactAuthereumProxyFactory.new(_proxyInitCode, authereumEnsManager.address)
     authereumProxyAccountUpgradeLogicContract = await ArtifactAuthereumProxyAccountUpgrade.new()
     authereumProxyAccountUpgradeWithInitLogicContract = await ArtifactAuthereumProxyAccountUpgradeWithInit.new()
@@ -123,7 +123,6 @@ contract('LoginKeyMetaTxAccount', function (accounts) {
     // Handle post-proxy deployment
     await authereumProxyAccount.sendTransaction({ value:constants.TWO_ETHER, from: AUTH_KEYS[0] })
     await utils.setAuthereumRecoveryModule(authereumProxyAccount, authereumRecoveryModule.address, AUTH_KEYS[0])
-    await utils.setAccountIn1820Registry(authereumProxyAccount, erc1820Registry.address, AUTH_KEYS[0])
 
     // Default transaction data
     nonce = await authereumProxyAccount.nonce()
@@ -726,7 +725,7 @@ contract('LoginKeyMetaTxAccount', function (accounts) {
         const afterProxyBalance = await balance.current(authereumProxyAccount.address)
         const afterRelayerBalance = await balance.current(RELAYER)
 
-        // The acccount should only lose the value they sent. The relayer should lose the fee amount.
+        // The account should only lose the value they sent. The relayer should lose the fee amount.
         assert.equal(Number(beforeProxyBalance) - value, Number(afterProxyBalance))
         assert.closeTo(Number(beforeRelayerBalance) - Number(afterRelayerBalance), 2091860000112640, 100000000000000)
       })
@@ -767,40 +766,12 @@ contract('LoginKeyMetaTxAccount', function (accounts) {
         const afterProxyBalanceToken = await authereumERC20.balanceOf(authereumProxyAccount.address)
         const afterRelayerBalanceToken = await authereumERC20.balanceOf(RELAYER)
 
-        // The acccount should only lose the value they sent. The relayer should lose the fee amount.
+        // The account should only lose the value they sent. The relayer should lose the fee amount.
         // The account should not lose any balance. The relayer shouldn't get any token balance
         assert.equal(Number(beforeProxyBalance) - value, Number(afterProxyBalance))
         assert.closeTo(Number(beforeRelayerBalance) - Number(afterRelayerBalance), 2098060000100352, 100000000000000)
         assert.equal(Number(beforeProxyBalanceToken), Number(afterProxyBalanceToken))
         assert.equal(Number(beforeRelayerBalanceToken), Number(afterRelayerBalanceToken))
-      })
-      it('Should allow the relayer to send a lower gasLimit than the user sets if the user does not use all of their allotted gas', async () => {
-        const _gasLimit = 2000000
-
-        // Confirm that the relayer gasLimit is higher than the user's _gasLimit
-        assert.isAbove(_gasLimit, gasLimit)
-        // Convert to transactions array
-        const _encodedParameters = await utils.encodeTransactionParams(to, value, _gasLimit, data)
-        const _transactions = [_encodedParameters]
-
-        // Get default signedMessageHash and signedLoginKey
-        const _transactionMessageHashSignature = await utils.getLoginKeySignedMessageHash(
-          authereumProxyAccount.address,
-          MSG_SIG,
-          constants.CHAIN_ID,
-          nonce,
-          _transactions,
-          gasPrice,
-          gasOverhead,
-          feeTokenAddress,
-          feeTokenRate
-        )
-
-        var { logs } = await authereumProxyAccount.executeMultipleLoginKeyMetaTransactions(
-          _transactions, gasPrice, gasOverhead, loginKeyRestrictionsData, feeTokenAddress, feeTokenRate, _transactionMessageHashSignature, loginKeyAttestationSignature, { from: RELAYER, gas: gasLimit}
-        )
-
-        expectEvent.inLogs(logs, 'CallFailed', { reason: constants.REVERT_MSG.BA_INSUFFICIENT_GAS_TRANSACTION})
       })
       it('Should successfully execute a login key meta transaction sent to an auth key with no data and low gasLimit', async () => {
         await authereumProxyAccount.sendTransaction({ value: constants.THREE_ETHER, from: AUTH_KEYS[0] })
@@ -938,6 +909,35 @@ contract('LoginKeyMetaTxAccount', function (accounts) {
     })
     context('Non-Happy Path', async () => {
       context('Bad Parameters', async () => {
+        it('Should not allow the relayer to send a lower gasLimit than the user sets if the user does not use all of their allotted gas', async () => {
+          const _gasLimit = 2000000
+
+          // Confirm that the relayer gasLimit is higher than the user's _gasLimit
+          assert.isAbove(_gasLimit, gasLimit)
+          // Convert to transactions array
+          const _encodedParameters = await utils.encodeTransactionParams(to, value, _gasLimit, data)
+          const _transactions = [_encodedParameters]
+
+          // Get default signedMessageHash and signedLoginKey
+          const _transactionMessageHashSignature = await utils.getLoginKeySignedMessageHash(
+            authereumProxyAccount.address,
+            MSG_SIG,
+            constants.CHAIN_ID,
+            nonce,
+            _transactions,
+            gasPrice,
+            gasOverhead,
+            feeTokenAddress,
+            feeTokenRate
+          )
+
+          await expectRevert(
+            authereumProxyAccount.executeMultipleLoginKeyMetaTransactions(
+              _transactions, gasPrice, gasOverhead, loginKeyRestrictionsData, feeTokenAddress, feeTokenRate, _transactionMessageHashSignature, loginKeyAttestationSignature, { from: RELAYER, gas: gasLimit}
+            ),
+            constants.REVERT_MSG.BMTA_ATOMIC_CALL_OUT_OF_GAS
+          )
+        })
         it('Should revert due to the relayer sending too small of a gasPrice with the transaction', async () => {
           await expectRevert(authereumProxyAccount.executeMultipleLoginKeyMetaTransactions(
             transactions, gasPrice, gasOverhead, loginKeyRestrictionsData, feeTokenAddress, feeTokenRate, transactionMessageHashSignature, loginKeyAttestationSignature, { from: RELAYER, gasPrice: gasPrice - 1 }
@@ -977,7 +977,7 @@ contract('LoginKeyMetaTxAccount', function (accounts) {
             transactions, gasPrice, gasOverhead, loginKeyRestrictionsData, feeTokenAddress, feeTokenRate, transactionMessageHashSignature, loginKeyAttestationSignature, { from: RELAYER, gasPrice: gasPrice }
           )
 
-          // Advance time to mimimc real life
+          // Advance time to mimic real life
           await timeUtils.increaseTime(15)
           const _value =  constants.TEN_ETHER
 
@@ -1027,7 +1027,8 @@ contract('LoginKeyMetaTxAccount', function (accounts) {
             _transactions, gasPrice, gasOverhead, loginKeyRestrictionsData, feeTokenAddress, feeTokenRate, _transactionMessageHashSignature, loginKeyAttestationSignature, { from: RELAYER, gasPrice: gasPrice }
           )
 
-          expectEvent.inLogs(logs, 'CallFailed', { reason: constants.REVERT_MSG.BT_WILL_FAIL })
+          const _expectedReason = constants.REVERT_MSG.AUTHEREUM_CALL_REVERT + constants.REVERT_MSG.BT_WILL_FAIL
+          expectEvent.inLogs(logs, 'CallFailed', { reason: _expectedReason })
         })
         it('Should increment the contract nonce by 2 even though the second of 2 atomic transactions failed (and should rewind the first)', async () => {
           await authereumProxyAccount.send(constants.THREE_ETHER, {from: AUTH_KEYS[0]})
@@ -1062,7 +1063,8 @@ contract('LoginKeyMetaTxAccount', function (accounts) {
             _transactions, gasPrice, gasOverhead, loginKeyRestrictionsData, feeTokenAddress, feeTokenRate, _transactionMessageHashSignature, loginKeyAttestationSignature, { from: RELAYER, gasPrice: gasPrice }
           )
 
-          expectEvent.inLogs(logs, 'CallFailed', { reason: constants.REVERT_MSG.BT_WILL_FAIL })
+          const _expectedReason = constants.REVERT_MSG.AUTHEREUM_CALL_REVERT + constants.REVERT_MSG.BT_WILL_FAIL
+          expectEvent.inLogs(logs, 'CallFailed', { reason: _expectedReason })
 
           // Get the new state
           const newNonce = await authereumProxyAccount.nonce()
@@ -1100,7 +1102,8 @@ contract('LoginKeyMetaTxAccount', function (accounts) {
             _transactions, gasPrice, gasOverhead, loginKeyRestrictionsData, feeTokenAddress, feeTokenRate, _transactionMessageHashSignature, loginKeyAttestationSignature, { from: RELAYER, gasPrice: gasPrice }
           )
 
-          expectEvent.inLogs(logs, 'CallFailed', { reason: constants.REVERT_MSG.BA_SILENT_REVERT })
+          const _expectedReason = constants.REVERT_MSG.AUTHEREUM_CALL_REVERT + constants.REVERT_MSG.BA_SILENT_REVERT
+          expectEvent.inLogs(logs, 'CallFailed', { reason: _expectedReason })
         })
         it('Should revert due to not enough funds being in the contract to send the refund', async () => {
           const _value = constants.TWO_ETHER
@@ -1371,7 +1374,8 @@ contract('LoginKeyMetaTxAccount', function (accounts) {
             _transactions, gasPrice, gasOverhead, loginKeyRestrictionsData, feeTokenAddress, feeTokenRate, _transactionMessageHashSignature, loginKeyAttestationSignature, { from: RELAYER, gasPrice: gasPrice }
           )
 
-          expectEvent.inLogs(logs, 'CallFailed', { reason: constants.REVERT_MSG.BA_SILENT_REVERT })
+          const _expectedReason = constants.REVERT_MSG.AUTHEREUM_CALL_REVERT + constants.REVERT_MSG.BA_SILENT_REVERT
+          expectEvent.inLogs(logs, 'CallFailed', { reason: _expectedReason })
         })
         it('Should revert due to incorrect transaction params (bytes in the addr param)', async () => {
           // Convert to transactions array
@@ -1418,11 +1422,12 @@ contract('LoginKeyMetaTxAccount', function (accounts) {
           )
 
           // NOTE: This should succeed. Even though the data is not in the correct order, it technically still is a valid transaction
-          var { logs } = await authereumProxyAccount.executeMultipleLoginKeyMetaTransactions(
-            _transactions, gasPrice, gasOverhead, loginKeyRestrictionsData, feeTokenAddress, feeTokenRate, _transactionMessageHashSignature, loginKeyAttestationSignature, { from: RELAYER, gas: _relayerGasLimit, gasPrice: gasPrice }
+          await expectRevert(
+            authereumProxyAccount.executeMultipleLoginKeyMetaTransactions(
+              _transactions, gasPrice, gasOverhead, loginKeyRestrictionsData, feeTokenAddress, feeTokenRate, _transactionMessageHashSignature, loginKeyAttestationSignature, { from: RELAYER, gas: _relayerGasLimit, gasPrice: gasPrice }
+            ),
+            constants.REVERT_MSG.BMTA_ATOMIC_CALL_OUT_OF_GAS
           )
-
-          expectEvent.inLogs(logs, 'CallFailed', { reason: constants.REVERT_MSG.BA_INSUFFICIENT_GAS_TRANSACTION })
         })
         it('Should revert due to the fact that the relayer used a different token address than expected', async () => {
           // Create a token for use in fee payments
@@ -1762,6 +1767,17 @@ contract('LoginKeyMetaTxAccount', function (accounts) {
           await expectRevert(authereumProxyAccount.executeMultipleLoginKeyMetaTransactions(
             transactions, gasPrice, gasOverhead, _loginKeyRestrictionsData, feeTokenAddress, feeTokenRate, transactionMessageHashSignature, _loginKeyAttestationSignature, { from: RELAYER, gasPrice: gasPrice }
           ), constants.REVERT_MSG.GENERAL_REVERT)
+        })
+        it('Should revert because the relayer didn\'t send enough gas but the tx would have passed if there was not a check in place', async () => {
+          // NOTE: This test accounts for the 1/64 rule in EIP 150
+          await authereumProxyAccount.sendTransaction({ value: constants.THREE_ETHER, from: AUTH_KEYS[0] })
+          const _badGasLimit = 636701
+          await expectRevert(
+            authereumProxyAccount.executeMultipleLoginKeyMetaTransactions(
+              transactions, gasPrice, gasOverhead, loginKeyRestrictionsData, feeTokenAddress, feeTokenRate, transactionMessageHashSignature, loginKeyAttestationSignature, { from: RELAYER, gasPrice: gasPrice, gas: _badGasLimit }
+            ),
+            constants.REVERT_MSG.BMTA_ATOMIC_CALL_OUT_OF_GAS
+          )
         })
       })
     })

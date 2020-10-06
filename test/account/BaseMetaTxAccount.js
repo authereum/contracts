@@ -1,5 +1,4 @@
 const { balance, expectEvent, expectRevert } = require('@openzeppelin/test-helpers')
-const isValidSignature = require('is-valid-signature')
 
 const utils = require('../utils/utils')
 const constants = require('../utils/constants.js')
@@ -86,11 +85,11 @@ contract('BaseMetaTxAccount', function (accounts) {
     const { authereumEnsManager } = await utils.setENSDefaults(AUTHEREUM_OWNER)
 
     // Message signature
-    MSG_SIG = await utils.getexecuteMultipleAuthKeyMetaTransactionsSig('2020021700')
+    MSG_SIG = await utils.getexecuteMultipleAuthKeyMetaTransactionsSig('2020070100')
 
     // Create Logic Contracts
     authereumAccountLogicContract = await ArtifactAuthereumAccount.new()
-    const _proxyInitCode = await utils.calculateProxyBytecodeAndConstructor(authereumAccountLogicContract.address)
+    const _proxyInitCode = await utils.getProxyBytecode()
     authereumProxyFactoryLogicContract = await ArtifactAuthereumProxyFactory.new(_proxyInitCode, authereumEnsManager.address)
     authereumProxyAccountUpgradeLogicContract = await ArtifactAuthereumProxyAccountUpgrade.new()
     authereumProxyAccountUpgradeWithInitLogicContract = await ArtifactAuthereumProxyAccountUpgradeWithInit.new()
@@ -118,7 +117,6 @@ contract('BaseMetaTxAccount', function (accounts) {
     // Handle post-proxy deployment
     await authereumProxyAccount.sendTransaction({ value:constants.TWO_ETHER, from: AUTH_KEYS[0] })
     await utils.setAuthereumRecoveryModule(authereumProxyAccount, authereumRecoveryModule.address, AUTH_KEYS[0])
-    await utils.setAccountIn1820Registry(authereumProxyAccount, erc1820Registry.address, AUTH_KEYS[0])
 
     // Default transaction data
     nonce = await authereumProxyAccount.nonce()
@@ -170,7 +168,7 @@ contract('BaseMetaTxAccount', function (accounts) {
   //  Tests  //
   //********//
 
-  describe('executeMultipleMetaTransactions', () => {
+  describe('executeMultipleTransactions', () => {
     context('Happy Path', async () => {
       it('Should execute a single transaction from an auth key (no refund)', async () => {
         await authereumProxyAccount.send(constants.ONE_ETHER, {from: AUTH_KEYS[0]})
@@ -179,7 +177,7 @@ contract('BaseMetaTxAccount', function (accounts) {
         const beforeToBal = await balance.current(to)
         const beforeAccountBal = await balance.current(authereumProxyAccount.address)
 
-        await authereumProxyAccount.executeMultipleMetaTransactions(
+        await authereumProxyAccount.executeMultipleTransactions(
           transactions, { from: AUTH_KEYS[0] }
         )
 
@@ -209,7 +207,7 @@ contract('BaseMetaTxAccount', function (accounts) {
         let _transactions = transactions.slice(0)
         _transactions.push(_encodedParameters)
 
-        await authereumProxyAccount.executeMultipleMetaTransactions(
+        await authereumProxyAccount.executeMultipleTransactions(
           _transactions, { from: AUTH_KEYS[0] }
         )
 
@@ -258,7 +256,7 @@ contract('BaseMetaTxAccount', function (accounts) {
         const _encodedParameters = await utils.encodeTransactionParams(_to, value, gasLimit, returnTransactionData)
         const _transactions = [_encodedParameters, _encodedParameters]
 
-        const tx = await authereumProxyAccount.executeMultipleMetaTransactions(
+        const tx = await authereumProxyAccount.executeMultipleTransactions(
           _transactions, { from: AUTH_KEYS[0] }
         )
 
@@ -280,15 +278,15 @@ contract('BaseMetaTxAccount', function (accounts) {
           const _encodedParameters = await utils.encodeTransactionParams(_to, value, gasLimit, _data)
           const _transactions = [_encodedParameters]
 
-          await expectRevert(authereumProxyAccount.executeMultipleMetaTransactions(
+          await expectRevert(authereumProxyAccount.executeMultipleTransactions(
             _transactions, { from: AUTH_KEYS[0] }
-          ), constants.REVERT_MSG.BT_WILL_FAIL)
+          ), constants.REVERT_MSG.AUTHEREUM_CALL_REVERT + constants.REVERT_MSG.BT_WILL_FAIL)
       })
       it('Should revert if a random address tries to call it', async () => {
           await authereumProxyAccount.send(constants.ONE_ETHER, {from: AUTH_KEYS[0]})
-          await expectRevert(authereumProxyAccount.executeMultipleMetaTransactions(
+          await expectRevert(authereumProxyAccount.executeMultipleTransactions(
             transactions, { from: LOGIN_KEYS[0] }
-          ), constants.REVERT_MSG.BA_REQUIRE_AUTH_KEY_OR_SELF)
+          ), constants.REVERT_MSG.BA_REQUIRE_AUTH_KEY)
       })
     })
   })

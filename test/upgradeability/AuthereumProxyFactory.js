@@ -58,7 +58,7 @@ contract('AuthereumProxyFactory', function (accounts) {
     // NOTE: tested and needs to be manipulated and redeployed
     // Create Logic Contracts
     authereumAccountLogicContract = await ArtifactAuthereumAccount.new()
-    const _proxyInitCode = await utils.calculateProxyBytecodeAndConstructor(authereumAccountLogicContract.address)
+    const _proxyInitCode = await utils.getProxyBytecode()
     authereumProxyFactoryLogicContract = await ArtifactAuthereumProxyFactory.new(_proxyInitCode, authereumEnsManager.address)
     authereumProxyAccountUpgradeLogicContract = await ArtifactAuthereumProxyAccountUpgrade.new()
     authereumProxyAccountUpgradeWithInitLogicContract = await ArtifactAuthereumProxyAccountUpgradeWithInit.new()
@@ -119,7 +119,7 @@ contract('AuthereumProxyFactory', function (accounts) {
     context('Happy Path', async () => {
       it('Should correctly get the initCode', async () => {
         const initCode = await authereumProxyFactoryLogicContract.getInitCode()
-        const expectedInitcode = await utils.calculateProxyBytecodeAndConstructor(authereumAccountLogicContract.address)
+        const expectedInitcode = await utils.getProxyBytecode()
         assert.equal(initCode, expectedInitcode)
       })
     })
@@ -140,15 +140,15 @@ contract('AuthereumProxyFactory', function (accounts) {
         const _initData = []
 
         // Generate the expected address based on an off-chain create2 calc
-        const expectedSaltHash = utils.getSaltHash(expectedSalt, _initData)
-        const proxyCodeAndConstructorHash = await utils.calculateProxyBytecodeAndConstructorHash(authereumAccountLogicContract.address)
-        const expectedAddress = utils.buildCreate2Address(authereumProxyFactoryLogicContract.address, expectedSaltHash, proxyCodeAndConstructorHash)
+        const expectedSaltHash = utils.getSaltHash(expectedSalt, _initData, authereumAccountLogicContract.address)
+        const proxyCodeWithConstructorHash = await utils.getProxyBytecodeWithConstructorHash(authereumAccountLogicContract.address)
+        const expectedAddress = utils.buildCreate2Address(authereumProxyFactoryLogicContract.address, expectedSaltHash, proxyCodeWithConstructorHash)
 
-        // Check that the contract has not been dployed by verifying that there is no code at the address
+        // Check that the contract has not been deployed by verifying that there is no code at the address
         let codeAtAddress = await web3.eth.getCode(expectedAddress)
         assert.equal(codeAtAddress, '0x')
 
-        await authereumProxyFactoryLogicContract.createProxy(expectedSalt, constants.DEFAULT_LABEL, _initData)
+        await authereumProxyFactoryLogicContract.createProxy(expectedSalt, constants.DEFAULT_LABEL, _initData, authereumAccountLogicContract.address)
 
         // Check that the contract is deployed by verifying that there is now code at the address
         codeAtAddress = await web3.eth.getCode(expectedAddress)
@@ -174,15 +174,15 @@ contract('AuthereumProxyFactory', function (accounts) {
         ]
 
         // Generate the expected address based on an off-chain create2 calc
-        const expectedSaltHash = utils.getSaltHash(expectedSalt, _initData)
-        const proxyCodeAndConstructorHash = await utils.calculateProxyBytecodeAndConstructorHash(authereumAccountLogicContract.address)
-        const expectedAddress = utils.buildCreate2Address(authereumProxyFactoryLogicContract.address, expectedSaltHash, proxyCodeAndConstructorHash)
+        const expectedSaltHash = utils.getSaltHash(expectedSalt, _initData, authereumAccountLogicContract.address)
+        const proxyCodeWithConstructorHash = await utils.getProxyBytecodeWithConstructorHash(authereumAccountLogicContract.address)
+        const expectedAddress = utils.buildCreate2Address(authereumProxyFactoryLogicContract.address, expectedSaltHash, proxyCodeWithConstructorHash)
 
-        // Check that the contract has not been dployed by verifying that there is no code at the address
+        // Check that the contract has not been deployed by verifying that there is no code at the address
         let codeAtAddress = await web3.eth.getCode(expectedAddress)
         assert.equal(codeAtAddress, '0x')
 
-        await authereumProxyFactoryLogicContract.createProxy(expectedSalt, expectedLabel, _initData)
+        await authereumProxyFactoryLogicContract.createProxy(expectedSalt, expectedLabel, _initData, authereumAccountLogicContract.address)
 
         // Check that the contract is deployed by verifying that there is now code at the address
         codeAtAddress = await web3.eth.getCode(expectedAddress)
@@ -201,12 +201,12 @@ contract('AuthereumProxyFactory', function (accounts) {
         assert.equal(constants.CHAIN_ID, chainId)
       })
       it('Should create a proxy based on the creationCode (multiple init data)', async () => {
-        // Redeploy facotry with new logic address
+        // Redeploy factory with new logic address
         // Create Logic Contracts
         authereumAccountLogicContract = await ArtifactAuthereumAccount.new()
         authereumProxyAccountUpgradeLogicContract = await ArtifactAuthereumProxyAccountUpgrade.new()
         authereumProxyAccountUpgradeWithInitLogicContract = await ArtifactAuthereumProxyAccountUpgradeWithInit.new()
-        const _upgradedProxyInitCode = await utils.calculateProxyBytecodeAndConstructor(authereumProxyAccountUpgradeWithInitLogicContract.address)
+        const _upgradedProxyInitCode = await utils.getProxyBytecode()
         authereumProxyFactoryLogicContract = await ArtifactAuthereumProxyFactory.new(_upgradedProxyInitCode, authereumEnsManager.address)
 
         // Set up Authereum ENS Manager defaults
@@ -234,16 +234,16 @@ contract('AuthereumProxyFactory', function (accounts) {
         ]
 
         // Generate the expected address based on an off-chain create2 calc
-        const expectedSaltHash = utils.getSaltHash(expectedSalt, _initData)
-        const proxyCodeAndConstructorHash = await utils.calculateProxyBytecodeAndConstructorHash(authereumProxyAccountUpgradeWithInitLogicContract.address)
-        const expectedAddress = utils.buildCreate2Address(authereumProxyFactoryLogicContract.address, expectedSaltHash, proxyCodeAndConstructorHash)
+        const expectedSaltHash = utils.getSaltHash(expectedSalt, _initData, authereumProxyAccountUpgradeWithInitLogicContract.address)
+        const proxyCodeWithConstructorHash = await utils.getProxyBytecodeWithConstructorHash(authereumProxyAccountUpgradeWithInitLogicContract.address)
+        const expectedAddress = utils.buildCreate2Address(authereumProxyFactoryLogicContract.address, expectedSaltHash, proxyCodeWithConstructorHash)
 
-        // Check that the contract has not been dployed by verifying that there is no code at the address
+        // Check that the contract has not been deployed by verifying that there is no code at the address
         let codeAtAddress = await web3.eth.getCode(expectedAddress)
         assert.equal(codeAtAddress, '0x')
 
         const expectedLabel = 'label1'
-        await authereumProxyFactoryLogicContract.createProxy(expectedSalt, expectedLabel, _initData)
+        await authereumProxyFactoryLogicContract.createProxy(expectedSalt, expectedLabel, _initData, authereumProxyAccountUpgradeWithInitLogicContract.address)
 
         // Check that the contract is deployed by verifying that there is now code at the address
         codeAtAddress = await web3.eth.getCode(expectedAddress)
@@ -271,11 +271,11 @@ contract('AuthereumProxyFactory', function (accounts) {
         assert.equal(constants.CHAIN_ID, chainId)
       })
       it('Should create a proxy based on the creationCode (1 init data, 1 non-init data)', async () => {
-        // Redeploy facotry with new logic address
+        // Redeploy factory with new logic address
         // Create Logic Contracts
         authereumAccountLogicContract = await ArtifactAuthereumAccount.new()
         authereumProxyAccountUpgradeLogicContract = await ArtifactAuthereumProxyAccountUpgrade.new()
-        const _upgradedProxyInitCode = await utils.calculateProxyBytecodeAndConstructor(authereumProxyAccountUpgradeLogicContract.address)
+        const _upgradedProxyInitCode = await utils.getProxyBytecode()
         authereumProxyFactoryLogicContract = await ArtifactAuthereumProxyFactory.new(_upgradedProxyInitCode, authereumEnsManager.address)
         authereumProxyAccountUpgradeWithInitLogicContract = await ArtifactAuthereumProxyAccountUpgradeWithInit.new()
 
@@ -299,15 +299,15 @@ contract('AuthereumProxyFactory', function (accounts) {
         ]
 
         // Generate the expected address based on an off-chain create2 calc
-        const expectedSaltHash = utils.getSaltHash(expectedSalt, _initData)
-        const proxyCodeAndConstructorHash = await utils.calculateProxyBytecodeAndConstructorHash(authereumProxyAccountUpgradeLogicContract.address)
-        const expectedAddress = utils.buildCreate2Address(authereumProxyFactoryLogicContract.address, expectedSaltHash, proxyCodeAndConstructorHash)
+        const expectedSaltHash = utils.getSaltHash(expectedSalt, _initData, authereumProxyAccountUpgradeLogicContract.address)
+        const proxyCodeWithConstructorHash = await utils.getProxyBytecodeWithConstructorHash(authereumProxyAccountUpgradeLogicContract.address)
+        const expectedAddress = utils.buildCreate2Address(authereumProxyFactoryLogicContract.address, expectedSaltHash, proxyCodeWithConstructorHash)
 
-        // Check that the contract has not been dployed by verifying that there is no code at the address
+        // Check that the contract has not been deployed by verifying that there is no code at the address
         let codeAtAddress = await web3.eth.getCode(expectedAddress)
         assert.equal(codeAtAddress, '0x')
 
-        await authereumProxyFactoryLogicContract.createProxy(expectedSalt, expectedLabel, _initData)
+        await authereumProxyFactoryLogicContract.createProxy(expectedSalt, expectedLabel, _initData, authereumProxyAccountUpgradeLogicContract.address)
 
         // Check that the contract is deployed by verifying that there is now code at the address
         codeAtAddress = await web3.eth.getCode(expectedAddress)
@@ -341,15 +341,15 @@ contract('AuthereumProxyFactory', function (accounts) {
         let _initData = []
 
         // Generate the expected address based on an off-chain create2 calc
-        let _expectedSaltHash = utils.getSaltHash(_expectedSalt, _initData)
-        let _proxyCodeAndConstructorHash = await utils.calculateProxyBytecodeAndConstructorHash(authereumAccountLogicContract.address)
-        let _expectedAddress = utils.buildCreate2Address(authereumProxyFactoryLogicContract.address, _expectedSaltHash, _proxyCodeAndConstructorHash)
+        let _expectedSaltHash = utils.getSaltHash(_expectedSalt, _initData, authereumAccountLogicContract.address)
+        let proxyCodeWithConstructorHash = await utils.getProxyBytecodeWithConstructorHash(authereumAccountLogicContract.address)
+        let _expectedAddress = utils.buildCreate2Address(authereumProxyFactoryLogicContract.address, _expectedSaltHash, proxyCodeWithConstructorHash)
 
-        // Check that the contract has not been dployed by verifying that there is no code at the address
+        // Check that the contract has not been deployed by verifying that there is no code at the address
         let _codeAtAddress = await web3.eth.getCode(_expectedAddress)
         assert.equal(_codeAtAddress, '0x')
 
-        await authereumProxyFactoryLogicContract.createProxy(_expectedSalt, constants.DEFAULT_LABEL, _initData)
+        await authereumProxyFactoryLogicContract.createProxy(_expectedSalt, constants.DEFAULT_LABEL, _initData, authereumAccountLogicContract.address)
 
         // Check that the contract is deployed by verifying that there is now code at the address
         _codeAtAddress = await web3.eth.getCode(_expectedAddress)
@@ -357,15 +357,15 @@ contract('AuthereumProxyFactory', function (accounts) {
 
         // Attempt with a new salt
         _expectedSalt += 1
-        await expectRevert(authereumProxyFactoryLogicContract.createProxy(_expectedSalt, constants.DEFAULT_LABEL, _initData), constants.REVERT_MSG.AEM_LABEL_OWNED)
+        await expectRevert(authereumProxyFactoryLogicContract.createProxy(_expectedSalt, constants.DEFAULT_LABEL, _initData, authereumAccountLogicContract.address), constants.REVERT_MSG.AEM_LABEL_OWNED)
       })
-      it('Should fail to create a proxy due to included data with a lenght of 0', async () => {
-        // Redeploy facotry with new logic address
+      it('Should fail to create a proxy due to included data with a length of 0', async () => {
+        // Redeploy factory with new logic address
         // Create Logic Contracts
         authereumAccountLogicContract = await ArtifactAuthereumAccount.new()
         authereumProxyAccountUpgradeLogicContract = await ArtifactAuthereumProxyAccountUpgrade.new()
         authereumProxyAccountUpgradeWithInitLogicContract = await ArtifactAuthereumProxyAccountUpgradeWithInit.new()
-        const _upgradedProxyInitCode = await utils.calculateProxyBytecodeAndConstructor(authereumProxyAccountUpgradeWithInitLogicContract.address)
+        const _upgradedProxyInitCode = await utils.getProxyBytecode()
         authereumProxyFactoryLogicContract = await ArtifactAuthereumProxyFactory.new(_upgradedProxyInitCode, authereumEnsManager.address)
 
         // Set up Authereum ENS Manager defaults
@@ -377,24 +377,24 @@ contract('AuthereumProxyFactory', function (accounts) {
         const _initData = [[]]
 
         // Generate the expected address based on an off-chain create2 calc
-        const expectedSaltHash = utils.getSaltHash(expectedSalt, _initData)
-        const proxyCodeAndConstructorHash = await utils.calculateProxyBytecodeAndConstructorHash(authereumProxyAccountUpgradeWithInitLogicContract.address)
-        const expectedAddress = utils.buildCreate2Address(authereumProxyFactoryLogicContract.address, expectedSaltHash, proxyCodeAndConstructorHash)
+        const expectedSaltHash = utils.getSaltHash(expectedSalt, _initData, authereumProxyAccountUpgradeWithInitLogicContract.address)
+        const proxyCodeWithConstructorHash = await utils.getProxyBytecodeWithConstructorHash(authereumProxyAccountUpgradeWithInitLogicContract.address)
+        const expectedAddress = utils.buildCreate2Address(authereumProxyFactoryLogicContract.address, expectedSaltHash, proxyCodeWithConstructorHash)
 
-        // Check that the contract has not been dployed by verifying that there is no code at the address
+        // Check that the contract has not been deployed by verifying that there is no code at the address
         let codeAtAddress = await web3.eth.getCode(expectedAddress)
         assert.equal(codeAtAddress, '0x')
 
         const expectedLabel = 'label1'
-        await expectRevert(authereumProxyFactoryLogicContract.createProxy(expectedSalt, expectedLabel, _initData), constants.REVERT_MSG.APF_EMPTY_INIT)
+        await expectRevert(authereumProxyFactoryLogicContract.createProxy(expectedSalt, expectedLabel, _initData, authereumProxyAccountUpgradeWithInitLogicContract.address), constants.REVERT_MSG.APF_EMPTY_INIT)
 
       })
       it('Should create a proxy based on the creationCode (1 init data, 1 non-init data)', async () => {
-        // Redeploy facotry with new logic address
+        // Redeploy factory with new logic address
         // Create Logic Contracts
         authereumAccountLogicContract = await ArtifactAuthereumAccount.new()
         authereumProxyAccountUpgradeLogicContract = await ArtifactAuthereumProxyAccountUpgrade.new()
-        const _upgradedProxyInitCode = await utils.calculateProxyBytecodeAndConstructor(authereumProxyAccountUpgradeLogicContract.address)
+        const _upgradedProxyInitCode = await utils.getProxyBytecode()
         authereumProxyFactoryLogicContract = await ArtifactAuthereumProxyFactory.new(_upgradedProxyInitCode, authereumEnsManager.address)
         authereumProxyAccountUpgradeWithInitLogicContract = await ArtifactAuthereumProxyAccountUpgradeWithInit.new()
 
@@ -418,15 +418,15 @@ contract('AuthereumProxyFactory', function (accounts) {
         ]
 
         // Generate the expected address based on an off-chain create2 calc
-        const expectedSaltHash = utils.getSaltHash(expectedSalt, _initData)
-        const proxyCodeAndConstructorHash = await utils.calculateProxyBytecodeAndConstructorHash(authereumProxyAccountUpgradeLogicContract.address)
-        const expectedAddress = utils.buildCreate2Address(authereumProxyFactoryLogicContract.address, expectedSaltHash, proxyCodeAndConstructorHash)
+        const expectedSaltHash = utils.getSaltHash(expectedSalt, _initData, authereumProxyAccountUpgradeLogicContract.address)
+        const proxyCodeWithConstructorHash = await utils.getProxyBytecodeWithConstructorHash(authereumProxyAccountUpgradeLogicContract.address)
+        const expectedAddress = utils.buildCreate2Address(authereumProxyFactoryLogicContract.address, expectedSaltHash, proxyCodeWithConstructorHash)
 
-        // Check that the contract has not been dployed by verifying that there is no code at the address
+        // Check that the contract has not been deployed by verifying that there is no code at the address
         let codeAtAddress = await web3.eth.getCode(expectedAddress)
         assert.equal(codeAtAddress, '0x')
 
-        await authereumProxyFactoryLogicContract.createProxy(expectedSalt, expectedLabel, _initData)
+        await authereumProxyFactoryLogicContract.createProxy(expectedSalt, expectedLabel, _initData, authereumProxyAccountUpgradeLogicContract.address)
 
         // Check that the contract is deployed by verifying that there is now code at the address
         codeAtAddress = await web3.eth.getCode(expectedAddress)
@@ -452,29 +452,6 @@ contract('AuthereumProxyFactory', function (accounts) {
         // Confirm original defaults never changed
         chainId = await upgradedAuthereumProxyAccount.getChainId()
         assert.equal(constants.CHAIN_ID, chainId)
-      })
-      it('Should fail to create a proxy based on bad init data', async () => {
-        // NOTE: Should never get here because implementation address should not be changed
-        // NOTE: This is a failure case and should never happen. This exists to be more
-        // NOTE: explicit if setInitCode() is ever removed from the contract.
-        const _originalInitCode = await authereumProxyFactoryLogicContract.getInitCode()
-        const _newInitCodeStr = _originalInitCode.substring(0, _originalInitCode.length - 40) + upgradeAccountBadInitContract.address.slice(2);
-        const _newInitCodeBytes = web3.utils.hexToBytes(web3.utils.toHex(_newInitCodeStr))
-
-        await authereumProxyFactoryLogicContract.setInitCode(_newInitCodeBytes, { from: AUTHEREUM_OWNER })
-
-        // Generate data
-        let _expectedSalt = constants.SALT
-        const _expectedLabel = 'label1'
-        const _data = [
-          await web3.eth.abi.encodeFunctionCall({
-            name: 'upgradeTest',
-            type: 'function',
-            inputs: []
-          }, []),
-        ]
-
-        await expectRevert(authereumProxyFactoryLogicContract.createProxy(_expectedSalt, _expectedLabel, _data), constants.REVERT_MSG.APF_UNSUCCESSFUL_INIT)
       })
     })
   })
