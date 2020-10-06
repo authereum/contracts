@@ -14,7 +14,7 @@ import "../interfaces/ILoginKeyTransactionValidator.sol";
 contract LoginKeyMetaTxAccount is BaseMetaTxAccount {
 
     /// @dev Execute an loginKey meta transaction
-    /// @param _transactions Arrays of transaction data ([to, value, gasLimit, data][...]...)
+    /// @param _transactions Arrays of transaction data ([to, value, gasLimit, data],[...],...)
     /// @param _gasPrice Gas price set by the user
     /// @param _gasOverhead Gas overhead of the transaction calculated offchain
     /// @param _loginKeyRestrictionsData Contains restrictions to the loginKey's functionality
@@ -111,7 +111,7 @@ contract LoginKeyMetaTxAccount is BaseMetaTxAccount {
     }
 
     /// @dev Validates all loginKey Restrictions
-    /// @param _transactions Arrays of transaction data ([to, value, gasLimit, data][...]...)
+    /// @param _transactions Arrays of transaction data ([to, value, gasLimit, data],[...],...)
     function _validateDestinations(
         bytes[] memory _transactions
     )

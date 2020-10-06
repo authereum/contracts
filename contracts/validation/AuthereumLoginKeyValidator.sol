@@ -27,7 +27,7 @@ contract AuthereumLoginKeyValidator is Owned, ILoginKeyTransactionValidator {
      * State
      */
 
-    mapping(address => bool) public relayerIsWhitelisted;
+    mapping(address => bool) public relayerIsAllowed;
 
     /// @dev Returns true and an empty string if transactions are valid and false and an error
     ///      message if it's invalid.
@@ -48,7 +48,7 @@ contract AuthereumLoginKeyValidator is Owned, ILoginKeyTransactionValidator {
         require(loginKeyExpirationTime > now, "LKV: Login key is expired");
 
         // Check that _relayerAddress is an Authereum relayer
-        require(relayerIsWhitelisted[_relayerAddress], "LKV: Invalid relayer");
+        require(relayerIsAllowed[_relayerAddress], "LKV: Invalid relayer");
     }
 
     /// @dev Called after a transaction is executed to record information about the transaction
@@ -64,24 +64,24 @@ contract AuthereumLoginKeyValidator is Owned, ILoginKeyTransactionValidator {
         external
     { }
 
-    /// @dev Whitelist an array of relayers
-    /// @param _newRelayers The list of relayers to be whitelisted
+    /// @dev Allow an array of relayers
+    /// @param _newRelayers The list of relayers to be allowed
     function addRelayers(address[] calldata _newRelayers) external onlyOwner {
         for (uint256 i = 0; i < _newRelayers.length; i++) {
             address relayer = _newRelayers[i];
-            require(relayerIsWhitelisted[relayer] == false, "LKV: Relayer has already been added");
-            relayerIsWhitelisted[relayer] = true;
+            require(relayerIsAllowed[relayer] == false, "LKV: Relayer has already been added");
+            relayerIsAllowed[relayer] = true;
             emit RelayerAdded(relayer);
         }
     }
 
-    /// @dev Remove a relayer from the whitelist
-    /// @param _relayersToRemove The list of relayers to remove from the whitelist
+    /// @dev Remove a relayer from the allowlist
+    /// @param _relayersToRemove The list of relayers to remove from the allowlist
     function removeRelayers(address[] calldata _relayersToRemove) external onlyOwner {
         for (uint256 i = 0; i < _relayersToRemove.length; i++) {
             address relayer = _relayersToRemove[i];
-            require(relayerIsWhitelisted[relayer] == true, "LKV: Address is not a relayer");
-            relayerIsWhitelisted[relayer] = false;
+            require(relayerIsAllowed[relayer] == true, "LKV: Address is not a relayer");
+            relayerIsAllowed[relayer] = false;
             emit RelayerRemoved(relayer);
         }
     }

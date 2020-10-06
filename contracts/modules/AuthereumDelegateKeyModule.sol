@@ -1,7 +1,7 @@
 pragma solidity 0.5.17;
 pragma experimental ABIEncoderV2;
 
-import "../account/AuthereumAccount.sol";
+import "../interfaces/IAuthereumAccount.sol";
 import "../libs/BytesLib.sol";
 import "../libs/SafeMath.sol";
 
@@ -80,7 +80,7 @@ contract AuthereumDelegateKeyModule {
 
     modifier onlyWhenRegisteredModule {
         require(
-            AuthereumAccount(msg.sender).authKeys(address(this)),
+            IAuthereumAccount(msg.sender).authKeys(address(this)),
             "ADKM: Delegate Key module not registered to account"
         );
         _;
@@ -173,13 +173,11 @@ contract AuthereumDelegateKeyModule {
 
         _validateCalldata(delegateKey, _data);
 
-        uint256 _gasLimit = _getExecutionGasLimit();
-
         return _executeTransaction(
             _authereumAccount,
             delegateKey.approvedDestination,
             _value,
-            _gasLimit,
+            gasleft(),
             _data
         );
     }
@@ -237,20 +235,6 @@ contract AuthereumDelegateKeyModule {
         return (functionSelector, parameters);
     }
 
-    function _getExecutionGasLimit() private returns (uint256) {
-        // We need to factor in the max possible cost of all calls in the chain in order to avoid an implicit reversion
-        // 63/64 accounts for EIP 150
-        // 9700 accounts for the max possible cost of the call to the proxy contract and the call to the logic contract
-        // 34700 accounts for the max possible cost of the call from the logic contract to the user's desired address
-        // 25000 accounts for the cost of the logic surrounding all calls
-        // NOTE: This last value is intentionally high as it is also used as a buffer against potential EVM changes
-        uint256 _gasLimit = ((gasleft() * 63 / 64 - 9700) * 63 / 64 - 9700) * 63 / 64 - 34700 - 25000;
-
-        // It is cheaper to check for an underflow this way than it is to use SafeMath
-        require(gasleft() > _gasLimit, "ADKM: Subtraction underflow");
-        return _gasLimit;
-    }
-
     function _executeTransaction(
         address payable _authereumAccount,
         address _to,
@@ -267,7 +251,7 @@ contract AuthereumDelegateKeyModule {
         transactions[0] = transactionData;
 
         // Make the transaction
-        bytes[] memory returnValues = AuthereumAccount(_authereumAccount).executeMultipleMetaTransactions(transactions);
+        bytes[] memory returnValues = IAuthereumAccount(_authereumAccount).executeMultipleTransactions(transactions);
 
         emit TransactionExecuted(_authereumAccount, msg.sender, _value, _data);
         return returnValues;

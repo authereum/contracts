@@ -16,12 +16,20 @@ contract BaseMetaTxAccount is BaseAccount {
      * Public functions
      */
 
-    /// @dev Execute multiple meta transactions
-    /// @notice This can only be called by self as a part of the atomic meta transaction
-    /// @param _transactions Arrays of transaction data ([to, value, gasLimit, data][...]...)
+    /// @dev Execute multiple transactions
+    /// @param _transactions Arrays of transaction data ([to, value, gasLimit, data],[...],...)
     /// @return The responses of the calls
-    function executeMultipleMetaTransactions(bytes[] memory _transactions) public onlyAuthKeySenderOrSelf returns (bytes[] memory) {
-        return _executeMultipleMetaTransactions(_transactions);
+    function executeMultipleTransactions(bytes[] memory _transactions) public onlyAuthKey returns (bytes[] memory) {
+        bool isMetaTransaction = false;
+        return _executeMultipleTransactions(_transactions, isMetaTransaction);
+    }
+
+    /// @dev Execute multiple meta transactions
+    /// @param _transactions Arrays of transaction data ([to, value, gasLimit, data],[...],...)
+    /// @return The responses of the calls
+    function executeMultipleMetaTransactions(bytes[] memory _transactions) public onlySelf returns (bytes[] memory) {
+        bool isMetaTransaction = true;
+        return _executeMultipleTransactions(_transactions, isMetaTransaction);
     }
 
     /**
@@ -29,7 +37,7 @@ contract BaseMetaTxAccount is BaseAccount {
      */
 
     /// @dev Atomically execute a meta transaction
-    /// @param _transactions Arrays of transaction data ([to, value, gasLimit, data][...]...)
+    /// @param _transactions Arrays of transaction data ([to, value, gasLimit, data],[...],...)
     /// @param _gasPrice Gas price set by the user
     /// @return A success boolean and the responses of the calls
     function _atomicExecuteMultipleMetaTransactions(
@@ -62,9 +70,8 @@ contract BaseMetaTxAccount is BaseAccount {
                 revert("BMTA: Atomic call ran out of gas");
             }
 
-            // All thrown errors will return a prefixed revert message
-            string memory _prefixedRevertMsg = _getRevertMsgFromRes(res);
-            emit CallFailed(_getStrippedRevertMsg(_prefixedRevertMsg));
+            string memory _revertMsg = _getRevertMsgFromRes(res);
+            emit CallFailed(_revertMsg);
         } else {
             _returnValues = abi.decode(res, (bytes[]));
         }
@@ -72,15 +79,16 @@ contract BaseMetaTxAccount is BaseAccount {
         return (success, _returnValues);
     }
 
-    /// @dev Execute a meta transaction
-    /// @param _transactions Arrays of transaction data ([to, value, gasLimit, data][...]...)
+    /// @dev Executes multiple transactions
+    /// @param _transactions Arrays of transaction data ([to, value, gasLimit, data],[...],...)
+    /// @param _isMetaTransaction True if the transaction is a meta transaction
     /// @return The responses of the calls
-    function _executeMultipleMetaTransactions(bytes[] memory _transactions) internal returns (bytes[] memory) {
+    function _executeMultipleTransactions(bytes[] memory _transactions, bool _isMetaTransaction) internal returns (bytes[] memory) {
         // Execute transactions individually
         bytes[] memory _returnValues = new bytes[](_transactions.length);
         for(uint i = 0; i < _transactions.length; i++) {
             // Execute the transaction
-            _returnValues[i] = _decodeAndExecuteTransaction(_transactions[i]);
+            _returnValues[i] = _decodeAndExecuteTransaction(_transactions[i], _isMetaTransaction);
         }
 
         return _returnValues;
@@ -88,14 +96,23 @@ contract BaseMetaTxAccount is BaseAccount {
 
     /// @dev Decode and execute a meta transaction
     /// @param _transaction Transaction (to, value, gasLimit, data)
+    /// @param _isMetaTransaction True if the transaction is a meta transaction
     /// @return Success status and response of the call
-    function _decodeAndExecuteTransaction(bytes memory _transaction) internal returns (bytes memory) {
+    function _decodeAndExecuteTransaction(bytes memory _transaction, bool _isMetaTransaction) internal returns (bytes memory) {
         (address _to, uint256 _value, uint256 _gasLimit, bytes memory _data) = _decodeTransactionData(_transaction);
 
+        if (_isMetaTransaction) {
+            // Require that there will be enough gas to complete the atomic transaction
+            // We use 64/63 of the to account for EIP-150 and validate that there will be enough remaining gas
+            // We use 34700 as the max possible cost for a call
+            // We add 100 as a buffer for additional logic costs
+            // NOTE: An out of gas failure after the completion of the call is the concern of the relayer
+            // NOTE: This check CANNOT have a revert reason, as the parent caller relies on a non-prefixed message for this reversion
+            require(gasleft() > _gasLimit.mul(64).div(63).add(34800));
+        }
+
         // Execute the transaction
-        return _executeTransaction(
-            _to, _value, _gasLimit, _data
-        );
+        return _executeTransaction(_to, _value, _gasLimit, _data);
     }
 
     /// @dev Decode transaction data

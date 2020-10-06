@@ -58,7 +58,7 @@ contract TransactionLimit is BaseAccount {
 
     /// @dev Change the daily limit for a user
     /// @param _newDailyLimit New daily limit to set
-    function changeDailyLimit(uint256 _newDailyLimit) public onlyAuthKeySenderOrSelf {
+    function changeDailyLimit(uint256 _newDailyLimit) public onlyAuthKeyOrSelf {
         dailyLimit = _newDailyLimit;
         emit DailyLimitChanged(msg.sender, dailyLimit);
     }

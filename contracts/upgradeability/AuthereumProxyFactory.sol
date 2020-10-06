@@ -27,7 +27,7 @@ contract AuthereumProxyFactory is Owned {
     event AuthereumEnsManagerChanged(address indexed authereumEnsManager);
 
     /// @dev Constructor
-    /// @param _initCode Init code of the AuthereumProxy and constructor
+    /// @param _initCode Init code of the AuthereumProxy without the constructor arguments
     /// @param _authereumEnsManagerAddress Address for the Authereum ENS Manager contract
     constructor(bytes memory _initCode, address _authereumEnsManagerAddress) public {
         initCode = _initCode;
@@ -41,8 +41,8 @@ contract AuthereumProxyFactory is Owned {
      * Setters
      */
 
-    /// @dev Setter for the proxy initCode
-    /// @param _initCode Init code of the AuthereumProxy and constructor
+    /// @dev Setter for the proxy initCode without the constructor arguments
+    /// @param _initCode Init code of the AuthereumProxy without the constructor arguments
     function setInitCode(bytes memory _initCode) public onlyOwner {
         initCode = _initCode;
         emit InitCodeChanged(initCode);
@@ -60,7 +60,7 @@ contract AuthereumProxyFactory is Owned {
      *  Getters
      */
 
-    /// @dev Getter for the proxy initCode
+    /// @dev Getter for the proxy initCode without the constructor arguments
     /// @return Init code
     function getInitCode() public view returns (bytes memory) {
         return initCode;
@@ -79,22 +79,24 @@ contract AuthereumProxyFactory is Owned {
     /// @param _salt A uint256 value to add randomness to the account creation
     /// @param _label Label for the user's Authereum ENS subdomain
     /// @param _initData Array of initialize data
+    /// @param _implementation Address of the logic contract that the proxy will point to
     function createProxy(
         uint256 _salt, 
         string memory _label,
-        bytes[] memory _initData
+        bytes[] memory _initData,
+        address _implementation
     ) 
         public 
         onlyOwner
         returns (AuthereumProxy)
     {
         address payable addr;
-        bytes memory _initCode = initCode;
-        bytes32 salt = _getSalt(_salt, _initData);
+        bytes32 create2Salt = _getCreate2Salt(_salt, _initData, _implementation);
+        bytes memory initCodeWithConstructor = abi.encodePacked(initCode, uint256(_implementation));
 
         // Create proxy
         assembly {
-            addr := create2(0, add(_initCode, 0x20), mload(_initCode), salt)
+            addr := create2(0, add(initCodeWithConstructor, 0x20), mload(initCodeWithConstructor), create2Salt)
             if iszero(extcodesize(addr)) {
                 revert(0, 0)
             }
@@ -117,8 +119,17 @@ contract AuthereumProxyFactory is Owned {
     /// @dev Generate a salt out of a uint256 value and the init data
     /// @param _salt A uint256 value to add randomness to the account creation
     /// @param _initData Array of initialize data
-    function _getSalt(uint256 _salt, bytes[] memory _initData) internal pure returns (bytes32) {
+    /// @param _implementation Address of the logic contract that the proxy will point to
+    function _getCreate2Salt(
+        uint256 _salt,
+        bytes[] memory _initData,
+        address _implementation
+    )
+        internal
+        pure
+        returns (bytes32)
+    {
         bytes32 _initDataHash = keccak256(abi.encode(_initData));
-        return keccak256(abi.encodePacked(_salt, _initDataHash)); 
+        return keccak256(abi.encodePacked(_salt, _initDataHash, _implementation));
     }
 }

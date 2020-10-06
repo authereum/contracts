@@ -5,7 +5,7 @@ import "./state/AuthereumEnsResolverState.sol";
 
 /**
  * @title AuthereumEnsResolver
-  * @author Authereum Labs, Inc.
+ * @author Authereum Labs, Inc.
  * @dev Authereum implementation of a Resolver.
  */
 
@@ -28,10 +28,8 @@ contract AuthereumEnsResolver is Managed, AuthereumEnsResolverState {
 
     /// @dev Constructor
     /// @param _ensAddr The ENS registrar contract
-    /// @param _timelockContract Authereum timelock contract address
-    constructor(EnsRegistry _ensAddr, address _timelockContract) public {
+    constructor(EnsRegistry _ensAddr) public {
         ens = _ensAddr;
-        timelockContract = _timelockContract;
     }
 
     /**

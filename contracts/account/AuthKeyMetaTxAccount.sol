@@ -12,7 +12,7 @@ import "./BaseMetaTxAccount.sol";
 contract AuthKeyMetaTxAccount is BaseMetaTxAccount {
 
     /// @dev Execute multiple authKey meta transactions
-    /// @param _transactions Arrays of transaction data ([to, value, gasLimit, data][...]...)
+    /// @param _transactions Arrays of transaction data ([to, value, gasLimit, data],[...],...)
     /// @param _gasPrice Gas price set by the user
     /// @param _gasOverhead Gas overhead of the transaction calculated offchain
     /// @param _feeTokenAddress Address of the token used to pay a fee

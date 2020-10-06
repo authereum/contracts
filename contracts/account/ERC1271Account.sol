@@ -11,14 +11,34 @@ import "../interfaces/IERC1271.sol";
 
 contract ERC1271Account is IERC1271, BaseAccount {
 
+    // NOTE: Valid magic value bytes4(keccak256("isValidSignature(bytes32,bytes)")
+    bytes4 constant private VALID_SIG = 0x1626ba7e;
     // NOTE: Valid magic value bytes4(keccak256("isValidSignature(bytes,bytes)")
-    bytes4 constant private VALID_SIG = 0x20c13b0b;
+    bytes4 constant private VALID_SIG_BYTES = 0x20c13b0b;
     // NOTE: Invalid magic value
     bytes4 constant private INVALID_SIG = 0xffffffff;
 
     /**
      *  Public functions
      */
+
+    /// @dev Check if a message hash and signature pair is valid
+    /// @notice The _signature parameter can either be one auth key signature or it can
+    /// @notice be a login key signature and an auth key signature (signed login key)
+    /// @param _messageHash Hash of the data that was signed
+    /// @param _signature Signature(s) of the data. Either a single signature (login) or two (login and auth)
+    /// @return VALID_SIG or INVALID_SIG hex data
+    function isValidSignature(
+        bytes32 _messageHash,
+        bytes memory _signature
+    )
+        public
+        view
+        returns (bytes4)
+    {
+        bool isValid = _isValidSignature(_messageHash, _signature);
+        return isValid ? VALID_SIG : INVALID_SIG;
+    }
 
     /// @dev Check if a message and signature pair is valid
     /// @notice The _signature parameter can either be one auth key signature or it can
@@ -34,48 +54,43 @@ contract ERC1271Account is IERC1271, BaseAccount {
         view
         returns (bytes4)
     {
-        if (_signature.length == 65) {
-            return isValidAuthKeySignature(_data, _signature);
-        } else if (_signature.length >= 130) {
-            return isValidLoginKeySignature(_data, _signature);
-        } else {
-            revert("ERC1271: Invalid isValidSignature _signature length");
-        }
+        bytes32 messageHash = _getEthSignedMessageHash(_data);
+        bool isValid = _isValidSignature(messageHash, _signature);
+        return isValid ? VALID_SIG_BYTES : INVALID_SIG;
     }
 
     /// @dev Check if a message and auth key signature pair is valid
-    /// @param _data Data that was signed
+    /// @param _messageHash Message hash that was signed
     /// @param _signature Signature of the data signed by the authkey
-    /// @return VALID_SIG or INVALID_SIG hex data
+    /// @return True if the signature is valid
     function isValidAuthKeySignature(
-        bytes memory _data,
+        bytes32 _messageHash,
         bytes memory _signature
     )
         public
         view
-        returns (bytes4)
+        returns (bool)
     {
         require(_signature.length == 65, "ERC1271: Invalid isValidAuthKeySignature _signature length");
 
-        address authKeyAddress = _getEthSignedMessageHash(_data).recover(
+        address authKeyAddress = _messageHash.recover(
             _signature
         );
 
-        bytes4 magicValue = _isValidAuthKey(authKeyAddress) ? VALID_SIG : INVALID_SIG;
-        return magicValue;
+        return _isValidAuthKey(authKeyAddress);
     }
 
     /// @dev Check if a message and login key signature pair is valid, as well as a signed login key by an auth key
-    /// @param _data Message that was signed
+    /// @param _messageHash Message hash that was signed
     /// @param _signature Signature of the data. Signed msg data by the login key and signed login key by auth key
-    /// @return VALID_SIG or INVALID_SIG hex data
+    /// @return True if the signature is valid
     function isValidLoginKeySignature(
-        bytes memory _data,
+        bytes32 _messageHash,
         bytes memory _signature
     )
         public
         view
-        returns (bytes4)
+        returns (bool)
     {
         require(_signature.length >= 130, "ERC1271: Invalid isValidLoginKeySignature _signature length");
 
@@ -84,7 +99,7 @@ contract ERC1271Account is IERC1271, BaseAccount {
         uint256 restrictionDataLength = _signature.length.sub(130);
         bytes memory loginKeyRestrictionsData = _signature.slice(130, restrictionDataLength);
 
-        address _loginKeyAddress = _getEthSignedMessageHash(_data).recover(
+        address _loginKeyAddress = _messageHash.recover(
             msgHashSignature
         );
 
@@ -99,13 +114,35 @@ contract ERC1271Account is IERC1271, BaseAccount {
             loginKeyAttestationSignature
         );
 
-        bytes4 magicValue = _isValidAuthKey(_authKeyAddress) ? VALID_SIG : INVALID_SIG;
-        return magicValue;
+        return _isValidAuthKey(_authKeyAddress);
     }
 
     /**
      *  Internal functions
      */
+
+    /// @dev Identify the key type and check if a message hash and signature pair is valid
+    /// @notice The _signature parameter can either be one auth key signature or it can
+    /// @notice be a login key signature and an auth key signature (signed login key)
+    /// @param _messageHash Hash of the data that was signed
+    /// @param _signature Signature(s) of the data. Either a single signature (login) or two (login and auth)
+    /// @return True if the signature is valid
+    function _isValidSignature(
+        bytes32 _messageHash,
+        bytes memory _signature
+    )
+        public
+        view
+        returns (bool)
+    {
+        if (_signature.length == 65) {
+            return isValidAuthKeySignature(_messageHash, _signature);
+        } else if (_signature.length >= 130) {
+            return isValidLoginKeySignature(_messageHash, _signature);
+        } else {
+            revert("ERC1271: Invalid isValidSignature _signature length");
+        }
+    }
 
     /// @dev Adds ETH signed message prefix to bytes message and hashes it
     /// @param _data Bytes data before adding the prefix

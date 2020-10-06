@@ -2,7 +2,7 @@ pragma solidity 0.5.17;
 pragma experimental ABIEncoderV2;
 
 import "../libs/SafeMath.sol";
-import "../account/AuthereumAccount.sol";
+import "../interfaces/IAuthereumAccount.sol";
 
 /**
  * @title AuthereumRecoveryModule
@@ -85,7 +85,7 @@ contract AuthereumRecoveryModule {
     }
 
     modifier onlyWhenRegisteredModule {
-        require(AuthereumAccount(msg.sender).authKeys(address(this)), "ARM: Recovery module not registered to account");
+        require(IAuthereumAccount(msg.sender).authKeys(address(this)), "ARM: Recovery module not registered to account");
         _;
     }
 
@@ -158,10 +158,10 @@ contract AuthereumRecoveryModule {
         RecoveryAttempt memory recoveryAttempt = recoveryAttempts[_accountContract][_recoveryAddress];
 
         require(recoveryAttempt.startTime != 0, "ARM: Recovery attempt does not exist");
-        require(recoveryAttempt.startTime.add(recoveryAccount.delay) < now, "ARM: Recovery attempt delay period has not completed");
+        require(recoveryAttempt.startTime.add(recoveryAccount.delay) <= now, "ARM: Recovery attempt delay period has not completed");
 
         delete recoveryAttempts[_accountContract][_recoveryAddress];
-        AuthereumAccount(_accountContract).addAuthKey(recoveryAttempt.newAuthKey);
+        IAuthereumAccount(_accountContract).addAuthKey(recoveryAttempt.newAuthKey);
 
         emit RecoveryCompleted(_accountContract, _recoveryAddress, recoveryAttempt.newAuthKey);
     }

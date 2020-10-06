@@ -25,13 +25,18 @@ contract BaseAccount is AccountState, AccountInitialize, TokenReceiverHooks {
 
     string constant public CALL_REVERT_PREFIX = "Authereum Call Revert: ";
 
+    modifier onlyAuthKey {
+        require(_isValidAuthKey(msg.sender), "BA: Only auth key allowed");
+        _;
+    }
+
     modifier onlySelf {
         require(msg.sender == address(this), "BA: Only self allowed");
         _;
     }
 
-    modifier onlyAuthKeySenderOrSelf {
-        require(_isValidAuthKey(msg.sender) || msg.sender == address(this), "BA: Auth key or self is invalid");
+    modifier onlyAuthKeyOrSelf {
+        require(_isValidAuthKey(msg.sender) || msg.sender == address(this), "BA: Only auth key or self allowed");
         _;
     }
 
@@ -65,7 +70,7 @@ contract BaseAccount is AccountState, AccountInitialize, TokenReceiverHooks {
 
     /// @dev Add an auth key to the list of auth keys
     /// @param _authKey Address of the auth key to add
-    function addAuthKey(address _authKey) external onlyAuthKeySenderOrSelf {
+    function addAuthKey(address _authKey) external onlyAuthKeyOrSelf {
         require(authKeys[_authKey] == false, "BA: Auth key already added");
         require(_authKey != address(this), "BA: Cannot add self as an auth key");
         authKeys[_authKey] = true;
@@ -75,7 +80,7 @@ contract BaseAccount is AccountState, AccountInitialize, TokenReceiverHooks {
 
     /// @dev Remove an auth key from the list of auth keys
     /// @param _authKey Address of the auth key to remove
-    function removeAuthKey(address _authKey) external onlyAuthKeySenderOrSelf {
+    function removeAuthKey(address _authKey) external onlyAuthKeyOrSelf {
         require(authKeys[_authKey] == true, "BA: Auth key not yet added");
         require(numAuthKeys > 1, "BA: Cannot remove last auth key");
         authKeys[_authKey] = false;
@@ -110,11 +115,6 @@ contract BaseAccount is AccountState, AccountInitialize, TokenReceiverHooks {
         internal
         returns (bytes memory)
     {
-        // Require that there will be enough gas to complete the atomic transaction
-        // We use 64/63 of the to account for EIP-150 and validate that there will be enough remaining gas
-        // We use 34700 as the max possible cost for a call
-        // NOTE: An out of gas failure after the completion of the call is the concern of the relayer
-        require(gasleft() > _gasLimit.mul(64).div(63).add(34700));
         (bool success, bytes memory res) = _to.call.gas(_gasLimit).value(_value)(_data);
 
         // Get the revert message of the call and revert with it if the call failed
@@ -142,13 +142,5 @@ contract BaseAccount is AccountState, AccountInitialize, TokenReceiverHooks {
     function _getPrefixedRevertMsg(bytes memory _res) internal pure returns (string memory) {
         string memory _revertMsg = _getRevertMsgFromRes(_res);
         return string(abi.encodePacked(CALL_REVERT_PREFIX, _revertMsg));
-    }
-
-    /// @dev Strip the prefix from the prefixed revert message
-    /// @param _prefixedRevertMsg Prefixed revert message string
-    /// @return Original revert message string
-    function _getStrippedRevertMsg(string memory _prefixedRevertMsg) internal pure returns (string memory) {
-        strings.slice memory _prefixedRevertMsgSlice = _prefixedRevertMsg.toSlice();
-        return _prefixedRevertMsgSlice.beyond(CALL_REVERT_PREFIX.toSlice()).toString();
     }
 }

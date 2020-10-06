@@ -11,7 +11,7 @@ import "./Owned.sol";
 contract Managed is Owned {
 
     // The managers
-    mapping (address => bool) public managers;
+    mapping(address => bool) public managers;
 
     /// @dev Throws if the sender is not a manager
     modifier onlyManager {

@@ -12,9 +12,8 @@ import "../../test/EnsReverseRegistrar.sol";
 contract AuthereumEnsResolverStateV1 {
 
     EnsRegistry ens;
-    address public timelockContract;
 
-    mapping (bytes32 => address) public addrs;
+    mapping(bytes32 => address) public addrs;
     mapping(bytes32 => string) public names;
     mapping(bytes32 => mapping(string => string)) public texts;
     mapping(bytes32 => bytes) public hashes;

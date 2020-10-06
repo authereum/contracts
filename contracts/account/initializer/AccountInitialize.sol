@@ -1,6 +1,8 @@
 pragma solidity 0.5.17;
 
 import "./AccountInitializeV1.sol";
+import "./AccountInitializeV2.sol";
+import "./AccountInitializeV3.sol";
 
 /**
  * @title AccountInitialize
@@ -12,4 +14,4 @@ import "./AccountInitializeV1.sol";
  * @dev versions of AccountInitializeVx that this contract will inherit.
  */
 
-contract AccountInitialize is AccountInitializeV1 {}
+contract AccountInitialize is AccountInitializeV1, AccountInitializeV2, AccountInitializeV3 {}
