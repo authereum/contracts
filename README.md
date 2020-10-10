@@ -157,7 +157,7 @@ Design Decisions:
 | 20 | Authereum Recovery Module     | 2020070100 | [0x891c1A794164C0DDaB3182c2b1b436b51B1F8B64](https://etherscan.io/address/0x891c1A794164C0DDaB3182c2b1b436b51B1F8B64)
 | 21 | Authereum Login Key Validator | 2020070100 | [0x4Af9d139B2E6739fd05fc5b9a06FA8B4df0A8d20](https://etherscan.io/address/0x4Af9d139B2E6739fd05fc5b9a06FA8B4df0A8d20)
 | 22 | ENS Registry                  | Public     | [0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e](https://etherscan.io/address/0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e)
-| 23 | ENS Reverse Registrar         | Public     | [0x9062C0A6Dbd6108336BcBe4593a3D1cE05512069](https://etherscan.io/address/0x9062C0A6Dbd6108336BcBe4593a3D1cE05512069)
+| 23 | ENS Reverse Registrar         | Public     | [0x084b1c3C81545d370f3634392De611CaaBFf8148](https://etherscan.io/address/0x084b1c3C81545d370f3634392De611CaaBFf8148)
 
 ### Kovan
 
